@@ -51,22 +51,29 @@ export default function ScheduleViewer({ schedule, courses, faculty }: ScheduleV
     // Check for conflicts
     const warnings: string[] = [];
 
-    // Check if faculty cannot teach on these days
+    // Extract cannot teach days from hard constraints
     const sectionDays = targetSection.timeSlot.days;
-    const cannotTeachDays = draggedFaculty.cannotTeachDays || [];
+    const cannotTeachConstraints = draggedFaculty.hardConstraints.filter(
+      hc => hc.type === 'cannot_teach_day' && hc.days
+    );
+    const cannotTeachDays = cannotTeachConstraints.flatMap(hc => hc.days || []);
     const conflictingDays = sectionDays.filter(day =>
-      cannotTeachDays.some(cannotDay => day.toLowerCase().includes(cannotDay.toLowerCase()))
+      cannotTeachDays.some(cannotDay => day === cannotDay)
     );
 
     if (conflictingDays.length > 0) {
       warnings.push(`⚠️ ${draggedFaculty.name} CANNOT teach on ${conflictingDays.join(', ')}`);
     }
 
-    // Check if outside preferred days
-    const preferredDays = draggedFaculty.preferredDays || [];
+    // Extract preferred days from preferences
+    const preferredDaysArrays = draggedFaculty.preferences
+      .filter(p => p.preferredDays && p.preferredDays.length > 0)
+      .map(p => p.preferredDays || []);
+    const preferredDays = preferredDaysArrays.length > 0 ? preferredDaysArrays[0] : [];
+
     if (preferredDays.length > 0) {
       const nonPreferredDays = sectionDays.filter(day =>
-        !preferredDays.some(prefDay => day.toLowerCase().includes(prefDay.toLowerCase()))
+        !preferredDays.some(prefDay => day === prefDay)
       );
       if (nonPreferredDays.length > 0) {
         warnings.push(`ℹ️ ${draggedFaculty.name} prefers not to teach on ${nonPreferredDays.join(', ')}`);
