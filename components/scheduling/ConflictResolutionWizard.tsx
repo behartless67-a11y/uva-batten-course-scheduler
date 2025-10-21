@@ -165,10 +165,14 @@ export default function ConflictResolutionWizard({
       }
 
       // Check for student cohort conflicts
-      const sameCohortSections = sections.filter(s =>
-        s.id !== currentSection.id &&
-        s.targetPrograms?.some(p => currentSection.targetPrograms?.includes(p))
-      );
+      const currentCourse = courses.find(c => c.id === currentSection.courseId);
+      const sameCohortSections = sections.filter(s => {
+        if (s.id === currentSection.id) return false;
+        const otherCourse = courses.find(c => c.id === s.courseId);
+        return currentCourse?.targetPrograms?.some(p =>
+          otherCourse?.targetPrograms?.includes(p)
+        );
+      });
 
       const cohortConflicts = sameCohortSections.filter(s =>
         s.timeSlot.days.some(day => newSlot.days.includes(day)) &&
