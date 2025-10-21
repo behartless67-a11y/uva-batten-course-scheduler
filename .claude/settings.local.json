@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/bh4hb/Desktop/AI_Working/BattenSpaceFrontEnd/**)",
+      "Bash(python -c \"from docx import Document; doc = Document(''CourseSchedulingCriteria.docx''); print(''\\n''.join([p.text for p in doc.paragraphs]))\")",
+      "Bash(pip install:*)",
+      "Bash(python:*)",
+      "Bash(mkdir:*)",
+      "Bash(npx create-next-app:*)",
+      "Bash(npm init:*)",
+      "Bash(npm install)",
+      "Bash(npm run build:*)",
+      "Bash(npm run dev:*)",
+      "Read(//c/Users/bh4hb/Desktop/AI_Working/**)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

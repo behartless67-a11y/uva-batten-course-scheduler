@@ -1,0 +1,15 @@
+facultyName,email,preferredDays,cannotTeachDays,shareParentingWith,notes
+Jay Shimshack,jay@batten.virginia.edu,"Monday,Wednesday",,,"Prefers morning classes"
+Sebastian Tello-Trillo,sebastian@batten.virginia.edu,"Tuesday,Thursday",Friday,,"Available most times"
+Dan Player,dan@batten.virginia.edu,"Monday,Wednesday,Friday",,,
+Andy Pennock,andy@batten.virginia.edu,"Tuesday,Thursday",,,"Prefers discussion sections on same day"
+Eileen Chou,eileen@batten.virginia.edu,"Monday,Wednesday",,Noah Myung,"Shares parenting with Noah Myung"
+Peter Johannessen,peter@batten.virginia.edu,"Monday,Tuesday,Wednesday,Thursday",Friday,,
+Craig Volden,craig@batten.virginia.edu,"Tuesday,Thursday",,,
+Andrew Simon,andrew@batten.virginia.edu,"Monday,Wednesday",,,
+Gelsdorf,gelsdorf@batten.virginia.edu,Wednesday,,"","Wednesday mornings and afternoons"
+Ben Converse,ben@batten.virginia.edu,"Tuesday,Thursday",,Sophie Trawalter,"Shares parenting with Sophie Trawalter"
+Sophie Trawalter,sophie@batten.virginia.edu,"Monday,Wednesday",,Ben Converse,"Shares parenting with Ben Converse"
+Paul Martin,paul@batten.virginia.edu,"Monday,Wednesday",,Michelle Claiborne,"Shares parenting with Michelle Claiborne"
+Michelle Claiborne,michelle@batten.virginia.edu,"Tuesday,Thursday",,Paul Martin,"Shares parenting with Paul Martin"
+Noah Myung,noah@batten.virginia.edu,"Tuesday,Thursday",,Eileen Chou,"Shares parenting with Eileen Chou"
