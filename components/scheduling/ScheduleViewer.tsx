@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Schedule, Course, Faculty, DayOfWeek, ScheduledSection } from '@/types/scheduling';
-import { Download, Grid, List, Search } from 'lucide-react';
+import { Schedule, Course, Faculty, DayOfWeek, ScheduledSection, TimeSlot } from '@/types/scheduling';
+import { Download, Grid, List, Search, Wand2 } from 'lucide-react';
 import { exportScheduleToExcel, exportConflictsToExcel } from '@/lib/utils/fileParser';
 import { formatTimeRange12Hour } from '@/lib/utils/timeFormat';
+import ConflictResolutionWizard, { ConflictResolution } from './ConflictResolutionWizard';
+import { TIME_SLOTS } from '@/lib/scheduling/timeSlots';
 
 interface ScheduleViewerProps {
   schedule: Schedule;
@@ -18,7 +20,10 @@ export default function ScheduleViewer({ schedule, courses, faculty }: ScheduleV
   const [filterLevel, setFilterLevel] = useState<'all' | 'undergraduate' | 'graduate'>('all');
   const [localSchedule, setLocalSchedule] = useState(schedule);
   const [draggedFaculty, setDraggedFaculty] = useState<Faculty | null>(null);
+  const [draggedSection, setDraggedSection] = useState<ScheduledSection | null>(null);
   const [dragOverSection, setDragOverSection] = useState<string | null>(null);
+  const [dragOverTimeSlot, setDragOverTimeSlot] = useState<{day: DayOfWeek, timeSlot: string} | null>(null);
+  const [showWizard, setShowWizard] = useState(false);
 
   const courseMap = new Map(courses.map(c => [c.id, c]));
   const facultyMap = new Map(faculty.map(f => [f.id, f]));
@@ -138,6 +143,104 @@ export default function ScheduleViewer({ schedule, courses, faculty }: ScheduleV
     setDraggedFaculty(null);
   };
 
+  // Course drag handlers for rescheduling
+  const handleCourseDragStart = (e: React.DragEvent, section: ScheduledSection) => {
+    setDraggedSection(section);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleTimeSlotDragOver = (e: React.DragEvent, day: DayOfWeek, timeSlot: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverTimeSlot({ day, timeSlot });
+  };
+
+  const handleTimeSlotDragLeave = () => {
+    setDragOverTimeSlot(null);
+  };
+
+  const handleTimeSlotDrop = (e: React.DragEvent, day: DayOfWeek, timeSlotKey: string) => {
+    e.preventDefault();
+    setDragOverTimeSlot(null);
+
+    if (!draggedSection) return;
+
+    const [startTime, endTime] = timeSlotKey.split('-');
+
+    // Find matching TIME_SLOT that includes this day
+    const newTimeSlot = TIME_SLOTS.find(
+      ts => ts.days.includes(day) && ts.startTime === startTime && ts.endTime === endTime
+    );
+
+    if (!newTimeSlot) {
+      alert('Could not find matching time slot. The course may need to stay on the same days.');
+      setDraggedSection(null);
+      return;
+    }
+
+    // Check for conflicts
+    const currentFaculty = faculty.find(f => f.id === draggedSection.facultyId);
+    if (currentFaculty) {
+      const cannotTeachDays = currentFaculty.hardConstraints
+        .filter(hc => hc.type === 'cannot_teach_day')
+        .flatMap(hc => hc.days || []);
+
+      const conflictingDays = newTimeSlot.days.filter(d => cannotTeachDays.includes(d));
+      if (conflictingDays.length > 0) {
+        const proceed = confirm(
+          `Warning: ${currentFaculty.name} CANNOT teach on ${conflictingDays.join(', ')}.\n\n` +
+          `Do you want to proceed anyway?`
+        );
+        if (!proceed) {
+          setDraggedSection(null);
+          return;
+        }
+      }
+    }
+
+    // Update the section with new time slot
+    const updatedSections = localSchedule.sections.map(section =>
+      section.id === draggedSection.id
+        ? { ...section, timeSlot: newTimeSlot }
+        : section
+    );
+
+    setLocalSchedule({
+      ...localSchedule,
+      sections: updatedSections,
+    });
+
+    setDraggedSection(null);
+  };
+
+  // Conflict resolution handler
+  const handleResolveConflict = (conflictId: string, resolution: ConflictResolution) => {
+    let updatedSections = [...localSchedule.sections];
+
+    if (resolution.type === 'reassign_faculty' && resolution.newFacultyId) {
+      updatedSections = updatedSections.map(section =>
+        section.id === resolution.sectionId
+          ? { ...section, facultyId: resolution.newFacultyId! }
+          : section
+      );
+    } else if (resolution.type === 'reschedule_section' && resolution.newTimeSlot) {
+      updatedSections = updatedSections.map(section =>
+        section.id === resolution.sectionId
+          ? { ...section, timeSlot: resolution.newTimeSlot! }
+          : section
+      );
+    }
+
+    // Remove the resolved conflict
+    const updatedConflicts = localSchedule.conflicts.filter(c => c.id !== conflictId);
+
+    setLocalSchedule({
+      ...localSchedule,
+      sections: updatedSections,
+      conflicts: updatedConflicts,
+    });
+  };
+
   // Filter sections
   const filteredSections = localSchedule.sections.filter(section => {
     const course = courseMap.get(section.courseId);
@@ -238,13 +341,22 @@ export default function ScheduleViewer({ schedule, courses, faculty }: ScheduleV
             </button>
 
             {schedule.conflicts.length > 0 && (
-              <button
-                onClick={handleExportConflicts}
-                className="flex items-center gap-2 px-4 py-2 bg-uva-navy text-white rounded-lg hover:bg-uva-blue-light transition-colors"
-              >
-                <Download className="w-4 h-4" />
-                <span className="text-sm font-medium">Export Conflicts</span>
-              </button>
+              <>
+                <button
+                  onClick={handleExportConflicts}
+                  className="flex items-center gap-2 px-4 py-2 bg-uva-navy text-white rounded-lg hover:bg-uva-blue-light transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  <span className="text-sm font-medium">Export Conflicts</span>
+                </button>
+                <button
+                  onClick={() => setShowWizard(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  <Wand2 className="w-4 h-4" />
+                  <span className="text-sm font-medium">Resolve Conflicts ({localSchedule.conflicts.length})</span>
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -267,9 +379,14 @@ export default function ScheduleViewer({ schedule, courses, faculty }: ScheduleV
               </div>
             ))}
           </div>
-          <p className="text-xs text-gray-600 mt-2">
-            💡 Drag a faculty member onto any course section below to reassign them
-          </p>
+          <div className="mt-3 space-y-1">
+            <p className="text-xs text-gray-600">
+              💡 <strong>Faculty Reassignment:</strong> Drag a faculty member onto any course section below
+            </p>
+            <p className="text-xs text-gray-600">
+              📅 <strong>Course Rescheduling:</strong> Drag a course section to a different time slot in the grid
+            </p>
+          </div>
         </div>
 
         {viewMode === 'grid' ? (
@@ -281,6 +398,11 @@ export default function ScheduleViewer({ schedule, courses, faculty }: ScheduleV
             onSectionDragLeave={handleSectionDragLeave}
             onSectionDrop={handleSectionDrop}
             dragOverSection={dragOverSection}
+            onCourseDragStart={handleCourseDragStart}
+            onTimeSlotDragOver={handleTimeSlotDragOver}
+            onTimeSlotDragLeave={handleTimeSlotDragLeave}
+            onTimeSlotDrop={handleTimeSlotDrop}
+            dragOverTimeSlot={dragOverTimeSlot}
           />
         ) : (
           <ListView
@@ -294,6 +416,18 @@ export default function ScheduleViewer({ schedule, courses, faculty }: ScheduleV
           />
         )}
       </div>
+
+      {/* Conflict Resolution Wizard */}
+      {showWizard && (
+        <ConflictResolutionWizard
+          conflicts={localSchedule.conflicts}
+          sections={localSchedule.sections}
+          faculty={faculty}
+          courses={courses}
+          onResolveConflict={handleResolveConflict}
+          onClose={() => setShowWizard(false)}
+        />
+      )}
     </div>
   );
 }
@@ -307,6 +441,11 @@ function GridView({
   onSectionDragLeave,
   onSectionDrop,
   dragOverSection,
+  onCourseDragStart,
+  onTimeSlotDragOver,
+  onTimeSlotDragLeave,
+  onTimeSlotDrop,
+  dragOverTimeSlot,
 }: {
   sections: ScheduledSection[];
   courseMap: Map<string, Course>;
@@ -315,6 +454,11 @@ function GridView({
   onSectionDragLeave: () => void;
   onSectionDrop: (e: React.DragEvent, sectionId: string) => void;
   dragOverSection: string | null;
+  onCourseDragStart: (e: React.DragEvent, section: ScheduledSection) => void;
+  onTimeSlotDragOver: (e: React.DragEvent, day: DayOfWeek, timeSlot: string) => void;
+  onTimeSlotDragLeave: () => void;
+  onTimeSlotDrop: (e: React.DragEvent, day: DayOfWeek, timeSlot: string) => void;
+  dragOverTimeSlot: {day: DayOfWeek, timeSlot: string} | null;
 }) {
   const days = [DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY];
 
@@ -368,8 +512,17 @@ function GridView({
               </td>
               {days.map(day => {
                 const sectionsInSlot = schedule[day]?.[timeSlot] || [];
+                const isTimeSlotDragOver = dragOverTimeSlot?.day === day && dragOverTimeSlot?.timeSlot === timeSlot;
                 return (
-                  <td key={day} className="border border-gray-300 px-2 py-2 align-top">
+                  <td
+                    key={day}
+                    className={`border border-gray-300 px-2 py-2 align-top min-h-[80px] transition-colors ${
+                      isTimeSlotDragOver ? 'bg-blue-100 ring-2 ring-blue-500' : ''
+                    }`}
+                    onDragOver={(e) => onTimeSlotDragOver(e, day, timeSlot)}
+                    onDragLeave={onTimeSlotDragLeave}
+                    onDrop={(e) => onTimeSlotDrop(e, day, timeSlot)}
+                  >
                     <div className="space-y-2">
                       {sectionsInSlot.map(section => {
                         const course = courseMap.get(section.courseId);
@@ -378,10 +531,12 @@ function GridView({
                         return (
                           <div
                             key={section.id}
+                            draggable
+                            onDragStart={(e) => onCourseDragStart(e, section)}
                             onDragOver={(e) => onSectionDragOver(e, section.id)}
                             onDragLeave={onSectionDragLeave}
                             onDrop={(e) => onSectionDrop(e, section.id)}
-                            className={`border-l-4 rounded p-2 text-sm transition-all cursor-pointer ${
+                            className={`border-l-4 rounded p-2 text-sm transition-all cursor-move ${
                               isDragOver
                                 ? 'bg-green-100 border-green-500 ring-2 ring-green-500'
                                 : 'bg-uva-orange bg-opacity-10 border-uva-orange hover:bg-opacity-20'
@@ -395,7 +550,7 @@ function GridView({
                             </p>
                             {isDragOver && (
                               <p className="text-xs text-green-700 font-semibold mt-1">
-                                Drop to reassign
+                                Drop faculty to reassign
                               </p>
                             )}
                           </div>
