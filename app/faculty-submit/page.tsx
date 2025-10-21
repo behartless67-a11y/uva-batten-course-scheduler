@@ -86,11 +86,22 @@ export default function FacultySubmitPage() {
   };
 
   return (
-    <div
-      className="min-h-screen bg-cover bg-center bg-fixed"
-      style={{ backgroundImage: "url('/garrett-hall-grayscale.jpg')" }}
-    >
-      <div className="min-h-screen bg-white bg-opacity-95 backdrop-blur-sm">
+    <div className="min-h-screen relative">
+      {/* Background Image */}
+      <div
+        className="fixed inset-0 -z-10"
+        style={{
+          backgroundImage: 'url(/garrett-hall-sunset.jpg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed',
+          filter: 'grayscale(100%)',
+        }}
+      ></div>
+      {/* Background Overlay */}
+      <div className="fixed inset-0 bg-white/85 -z-10"></div>
+
+      <div className="min-h-screen">
         {/* Header */}
         <div className="bg-uva-navy text-white py-6 shadow-lg">
           <div className="max-w-[98vw] mx-auto px-4">
