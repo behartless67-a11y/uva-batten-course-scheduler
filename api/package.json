@@ -1,0 +1,11 @@
+{
+  "name": "uva-batten-scheduler-api",
+  "version": "1.0.0",
+  "description": "Azure Functions for UVA Batten Course Scheduler",
+  "main": "faculty-submissions.js",
+  "scripts": {
+    "test": "echo \"No tests yet\""
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
