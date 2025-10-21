@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Calendar, Upload, FileSpreadsheet, AlertCircle, CheckCircle } from 'lucide-react';
-import FileUploadSection from '@/components/scheduling/FileUploadSection';
+import FileUploadSection, { TemplateDownloadSection } from '@/components/scheduling/FileUploadSection';
 import ScheduleViewer from '@/components/scheduling/ScheduleViewer';
 import ConflictPanel from '@/components/scheduling/ConflictPanel';
 import { Schedule, Faculty, Course, SchedulerConfig, Semester } from '@/types/scheduling';
@@ -149,7 +149,10 @@ export default function Home() {
 
         {/* Step 1: Upload Files */}
         {step === 'upload' && (
-          <FileUploadSection onFilesUploaded={handleFilesUploaded} />
+          <>
+            <FileUploadSection onFilesUploaded={handleFilesUploaded} />
+            <TemplateDownloadSection />
+          </>
         )}
 
         {/* Step 2: Configure */}

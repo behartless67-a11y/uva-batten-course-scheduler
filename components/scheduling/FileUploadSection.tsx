@@ -154,28 +154,33 @@ export default function FileUploadSection({ onFilesUploaded }: FileUploadSection
       >
         {loading ? 'Processing Files...' : 'Continue to Configuration'}
       </button>
+    </div>
+  );
+}
 
-      <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="font-semibold text-blue-900 mb-2">Sample Templates</h4>
-        <p className="text-sm text-blue-700 mb-3">
-          Download sample Excel templates to see the expected format:
-        </p>
-        <div className="flex gap-3">
-          <a
-            href="/templates/faculty-template.csv"
-            download="faculty-template.csv"
-            className="text-sm text-uva-orange hover:text-uva-orange-light font-medium underline cursor-pointer"
-          >
-            Download Faculty Template
-          </a>
-          <a
-            href="/templates/course-template.csv"
-            download="course-template.csv"
-            className="text-sm text-uva-orange hover:text-uva-orange-light font-medium underline cursor-pointer"
-          >
-            Download Course Template
-          </a>
-        </div>
+// Server-side component for download links - renders as static HTML
+export function TemplateDownloadSection() {
+  return (
+    <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <h4 className="font-semibold text-blue-900 mb-2">Sample Templates</h4>
+      <p className="text-sm text-blue-700 mb-3">
+        Download sample Excel templates to see the expected format:
+      </p>
+      <div className="flex gap-3">
+        <a
+          href="/templates/faculty-template.csv"
+          download="faculty-template.csv"
+          className="text-sm text-uva-orange hover:text-uva-orange-light font-medium underline cursor-pointer"
+        >
+          Download Faculty Template
+        </a>
+        <a
+          href="/templates/course-template.csv"
+          download="course-template.csv"
+          className="text-sm text-uva-orange hover:text-uva-orange-light font-medium underline cursor-pointer"
+        >
+          Download Course Template
+        </a>
       </div>
     </div>
   );
