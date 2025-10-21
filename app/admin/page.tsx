@@ -93,6 +93,52 @@ export default function AdminDashboard() {
     XLSX.writeFile(wb, `faculty-preferences-${timestamp}.xlsx`);
   };
 
+  const exportToCSV = () => {
+    if (submissions.length === 0) {
+      alert('No submissions to export');
+      return;
+    }
+
+    // Transform data for CSV - formatted for scheduler upload
+    const csvData = filteredSubmissions.map(sub => ({
+      'Faculty Name': sub.facultyName,
+      'Email': sub.email,
+      'Preferred Days': sub.preferredDays || '',
+      'Unavailable Days': sub.cannotTeachDays || '',
+      'Parenting Partner': sub.shareParentingWith || '',
+    }));
+
+    // Create CSV content
+    const headers = Object.keys(csvData[0]);
+    const csvRows = [
+      headers.join(','),
+      ...csvData.map(row =>
+        headers.map(header => {
+          const value = row[header as keyof typeof row] || '';
+          // Escape quotes and wrap in quotes if contains comma, quote, or newline
+          const escaped = value.toString().replace(/"/g, '""');
+          return /[",\n]/.test(escaped) ? `"${escaped}"` : escaped;
+        }).join(',')
+      ),
+    ];
+
+    const csvContent = csvRows.join('\n');
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+
+    const timestamp = new Date().toISOString().split('T')[0];
+    link.setAttribute('href', url);
+    link.setAttribute('download', `faculty-preferences-${timestamp}.csv`);
+    link.style.visibility = 'hidden';
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const filteredSubmissions = submissions.filter(sub =>
     filter === '' ||
     sub.facultyName.toLowerCase().includes(filter.toLowerCase()) ||
@@ -176,9 +222,18 @@ export default function AdminDashboard() {
                   {isLoading ? 'Refreshing...' : 'Refresh'}
                 </button>
                 <button
+                  onClick={exportToCSV}
+                  disabled={filteredSubmissions.length === 0}
+                  className="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-all disabled:opacity-50"
+                  title="Export as CSV for scheduler upload"
+                >
+                  Export to CSV
+                </button>
+                <button
                   onClick={exportToExcel}
                   disabled={filteredSubmissions.length === 0}
                   className="px-6 py-2 bg-uva-orange text-white font-semibold rounded-lg hover:bg-opacity-90 transition-all disabled:opacity-50"
+                  title="Export as Excel for viewing/printing"
                 >
                   Export to Excel
                 </button>

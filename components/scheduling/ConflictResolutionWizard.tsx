@@ -16,17 +16,23 @@ interface ConflictResolutionWizardProps {
 }
 
 export interface ConflictResolution {
-  type: 'reassign_faculty' | 'reschedule_section' | 'mark_reviewed';
+  type: 'reassign_faculty' | 'reschedule_section' | 'mark_reviewed' | 'undo';
   sectionId: string;
   newFacultyId?: string;
   newTimeSlot?: TimeSlot;
   notes?: string;
+  previousState?: {
+    facultyId?: string;
+    timeSlot?: TimeSlot;
+  };
 }
 
 interface ConflictSuggestion {
   description: string;
   resolution: ConflictResolution;
   score: number; // 0-100, higher is better
+  cascadingIssues?: string[];
+  affectedSections?: number;
 }
 
 export default function ConflictResolutionWizard({
@@ -40,6 +46,7 @@ export default function ConflictResolutionWizard({
   const [currentConflictIndex, setCurrentConflictIndex] = useState(0);
   const [suggestions, setSuggestions] = useState<ConflictSuggestion[]>([]);
   const [resolvedConflicts, setResolvedConflicts] = useState<Set<string>>(new Set());
+  const [resolutionHistory, setResolutionHistory] = useState<Array<{conflictId: string, resolution: ConflictResolution}>>([]);
 
   const currentConflict = conflicts[currentConflictIndex];
   const progress = ((currentConflictIndex + 1) / conflicts.length) * 100;
@@ -61,37 +68,300 @@ export default function ConflictResolutionWizard({
     const course = courses.find(c => c.id === section.courseId);
     const currentFaculty = faculty.find(f => f.id === section.facultyId);
 
+    // Build conflict context for detailed descriptions
+    const conflictContext = buildConflictContext(conflict, section, currentFaculty);
+
     // Suggestion 1: Find alternative faculty for any conflict
     const availableFaculty = findAvailableFaculty(section, conflict);
     availableFaculty.slice(0, 3).forEach(f => {
-      newSuggestions.push({
-        description: `Reassign to ${f.name} (has availability and meets requirements)`,
-        resolution: {
-          type: 'reassign_faculty',
-          sectionId: section.id,
-          newFacultyId: f.id,
+      const facultyDetails = getFacultyReassignmentDetails(f, section, currentFaculty, course);
+      const resolution: ConflictResolution = {
+        type: 'reassign_faculty',
+        sectionId: section.id,
+        newFacultyId: f.id,
+        previousState: {
+          facultyId: section.facultyId,
         },
-        score: calculateFacultyScore(f, section, course),
+      };
+      const cascadingIssues = checkCascadingEffects(resolution, section);
+
+      newSuggestions.push({
+        description: `Reassign to ${f.name} - ${facultyDetails}`,
+        resolution,
+        score: calculateFacultyScore(f, section, course) - (cascadingIssues.length * 20),
+        cascadingIssues,
       });
     });
 
     // Suggestion 2: Find alternative time slots for any conflict
     const availableTimeSlots = findAvailableTimeSlots(section);
     availableTimeSlots.slice(0, 3).forEach(timeSlot => {
-      newSuggestions.push({
-        description: `Reschedule to ${timeSlot.days.join('/')} ${formatTimeRange12Hour(timeSlot.startTime, timeSlot.endTime)}`,
-        resolution: {
-          type: 'reschedule_section',
-          sectionId: section.id,
-          newTimeSlot: timeSlot,
+      const rescheduleDetails = getRescheduleDetails(timeSlot, section, currentFaculty, conflictContext);
+      const resolution: ConflictResolution = {
+        type: 'reschedule_section',
+        sectionId: section.id,
+        newTimeSlot: timeSlot,
+        previousState: {
+          timeSlot: section.timeSlot,
         },
-        score: calculateTimeSlotScore(timeSlot, section, currentFaculty),
+      };
+      const cascadingIssues = checkCascadingEffects(resolution, section);
+
+      newSuggestions.push({
+        description: `Reschedule to ${timeSlot.days.join('/')} ${formatTimeRange12Hour(timeSlot.startTime, timeSlot.endTime)} - ${rescheduleDetails}`,
+        resolution,
+        score: calculateTimeSlotScore(timeSlot, section, currentFaculty) - (cascadingIssues.length * 20),
+        cascadingIssues,
       });
     });
 
     // Sort by score (highest first)
     newSuggestions.sort((a, b) => b.score - a.score);
     setSuggestions(newSuggestions);
+  };
+
+  const checkCascadingEffects = (
+    resolution: ConflictResolution,
+    currentSection: ScheduledSection
+  ): string[] => {
+    const issues: string[] = [];
+
+    if (resolution.type === 'reschedule_section' && resolution.newTimeSlot) {
+      const newSlot = resolution.newTimeSlot;
+
+      // Check for room conflicts
+      const roomConflicts = sections.filter(s =>
+        s.id !== currentSection.id &&
+        s.room.id === currentSection.room.id &&
+        s.timeSlot.days.some(day => newSlot.days.includes(day)) &&
+        s.timeSlot.startTime === newSlot.startTime &&
+        s.timeSlot.endTime === newSlot.endTime
+      );
+
+      if (roomConflicts.length > 0) {
+        const conflictingCourse = courses.find(c => c.id === roomConflicts[0].courseId);
+        issues.push(`Room conflict with ${conflictingCourse?.code || 'another course'}`);
+      }
+
+      // Check for Batten Hour violations (Monday 12:30-1:30 PM)
+      const battenHourStart = 12 * 60 + 30; // 12:30 PM in minutes
+      const battenHourEnd = 13 * 60 + 30; // 1:30 PM in minutes
+      const course = courses.find(c => c.id === currentSection.courseId);
+
+      if (
+        course?.type === 'Core' &&
+        newSlot.days.includes('Monday' as DayOfWeek) &&
+        newSlot.startTime >= battenHourStart &&
+        newSlot.startTime < battenHourEnd
+      ) {
+        issues.push('⚠️ BATTEN HOUR VIOLATION: Core courses cannot be scheduled Monday 12:30-1:30 PM');
+      }
+
+      // Check for student cohort conflicts
+      const sameCohortSections = sections.filter(s =>
+        s.id !== currentSection.id &&
+        s.targetPrograms?.some(p => currentSection.targetPrograms?.includes(p))
+      );
+
+      const cohortConflicts = sameCohortSections.filter(s =>
+        s.timeSlot.days.some(day => newSlot.days.includes(day)) &&
+        s.timeSlot.startTime === newSlot.startTime &&
+        s.timeSlot.endTime === newSlot.endTime
+      );
+
+      if (cohortConflicts.length > 0) {
+        const conflictingCourses = cohortConflicts
+          .map(s => courses.find(c => c.id === s.courseId)?.code)
+          .filter(Boolean)
+          .slice(0, 2)
+          .join(', ');
+        issues.push(`Student cohort conflict with ${conflictingCourses}`);
+      }
+    }
+
+    if (resolution.type === 'reassign_faculty' && resolution.newFacultyId) {
+      const newFaculty = faculty.find(f => f.id === resolution.newFacultyId);
+
+      // Check for parenting partner conflicts
+      if (newFaculty?.hardConstraints) {
+        const parentingPartner = newFaculty.hardConstraints.find(
+          hc => hc.type === 'parenting_partner'
+        )?.facultyId;
+
+        if (parentingPartner) {
+          const partnerSections = sections.filter(s => s.facultyId === parentingPartner);
+          const conflicts = partnerSections.filter(s =>
+            s.timeSlot.days.some(day => currentSection.timeSlot.days.includes(day)) &&
+            s.timeSlot.startTime === currentSection.timeSlot.startTime
+          );
+
+          if (conflicts.length > 0) {
+            const partner = faculty.find(f => f.id === parentingPartner);
+            issues.push(`⚠️ Parenting partner conflict with ${partner?.name}`);
+          }
+        }
+      }
+    }
+
+    return issues;
+  };
+
+  const buildConflictContext = (
+    conflict: Conflict,
+    section: ScheduledSection,
+    faculty: Faculty | undefined
+  ): string => {
+    const reasons: string[] = [];
+
+    // Check for Batten Hour violations
+    const battenHourStart = 12 * 60 + 30;
+    const battenHourEnd = 13 * 60 + 30;
+    const course = courses.find(c => c.id === section.courseId);
+
+    if (
+      conflict.type.toLowerCase().includes('batten') ||
+      (course?.type === 'Core' &&
+        section.timeSlot.days.includes('Monday' as DayOfWeek) &&
+        section.timeSlot.startTime >= battenHourStart &&
+        section.timeSlot.startTime < battenHourEnd)
+    ) {
+      reasons.push('⚠️ BATTEN HOUR VIOLATION: Core courses cannot be scheduled Monday 12:30-1:30 PM');
+    }
+
+    // Identify the specific conflict reason
+    if (conflict.type.toLowerCase().includes('faculty') && conflict.type.toLowerCase().includes('conflict')) {
+      const conflictingSections = sections.filter(s =>
+        s.facultyId === faculty?.id &&
+        s.id !== section.id &&
+        s.timeSlot.days.some(day => section.timeSlot.days.includes(day)) &&
+        s.timeSlot.startTime === section.timeSlot.startTime
+      );
+      if (conflictingSections.length > 0) {
+        const conflictingCourses = conflictingSections
+          .map(s => courses.find(c => c.id === s.courseId)?.code)
+          .filter(Boolean)
+          .join(', ');
+        reasons.push(`${faculty?.name} is teaching ${conflictingCourses} at this time`);
+      }
+    }
+
+    if (conflict.type.toLowerCase().includes('room')) {
+      reasons.push(`room ${section.room.name} is double-booked`);
+    }
+
+    if (conflict.type.toLowerCase().includes('preference')) {
+      reasons.push(`conflicts with ${faculty?.name}'s availability preferences`);
+    }
+
+    if (conflict.type.toLowerCase().includes('parenting')) {
+      reasons.push('⚠️ parenting partner scheduling conflict');
+    }
+
+    // Handle multiple affected sections
+    if (conflict.affectedSections.length > 1) {
+      reasons.push(`affects ${conflict.affectedSections.length} sections`);
+    }
+
+    return reasons.join(', ') || 'scheduling conflict';
+  };
+
+  const getFacultyReassignmentDetails = (
+    newFaculty: Faculty,
+    section: ScheduledSection,
+    currentFaculty: Faculty | undefined,
+    course: Course | undefined
+  ): string => {
+    const details: string[] = [];
+
+    // Check day preferences
+    const preferredDays = newFaculty.preferences
+      .filter(p => p.preferredDays && p.preferredDays.length > 0)
+      .flatMap(p => p.preferredDays || []);
+    const matchingDays = section.timeSlot.days.filter(day =>
+      preferredDays.includes(day)
+    );
+
+    if (matchingDays.length > 0) {
+      details.push(`prefers ${matchingDays.join('/')}`);
+    } else if (preferredDays.length > 0) {
+      details.push(`normally prefers ${preferredDays.slice(0, 2).join('/')}`);
+    }
+
+    // Check current workload
+    const currentAssignments = sections.filter(s => s.facultyId === newFaculty.id).length;
+    const originalAssignments = currentFaculty
+      ? sections.filter(s => s.facultyId === currentFaculty.id).length
+      : 0;
+
+    if (currentAssignments < originalAssignments - 1) {
+      details.push(`lighter teaching load (${currentAssignments} courses)`);
+    } else if (currentAssignments > originalAssignments + 1) {
+      details.push(`heavier load (${currentAssignments} courses)`);
+    }
+
+    // Check if they're available
+    details.push('available at this time');
+
+    return details.length > 0 ? details.join(', ') : 'has availability and meets requirements';
+  };
+
+  const getRescheduleDetails = (
+    timeSlot: TimeSlot,
+    section: ScheduledSection,
+    faculty: Faculty | undefined,
+    conflictContext: string
+  ): string => {
+    const details: string[] = [];
+
+    // Explain why this resolves the conflict
+    details.push(`resolves ${conflictContext}`);
+
+    // Check if it matches faculty preferences
+    if (faculty) {
+      const preferredDays = faculty.preferences
+        .filter(p => p.preferredDays && p.preferredDays.length > 0)
+        .flatMap(p => p.preferredDays || []);
+      const matchingDays = timeSlot.days.filter(day =>
+        preferredDays.includes(day)
+      );
+
+      if (matchingDays.length === timeSlot.days.length) {
+        details.push(`matches ${faculty.name}'s preferred days`);
+      } else if (matchingDays.length > 0) {
+        details.push(`partially matches ${faculty.name}'s preferences`);
+      } else if (preferredDays.length > 0) {
+        details.push(`${faculty.name} prefers ${preferredDays.slice(0, 2).join('/')}`);
+      }
+    }
+
+    // Note if it's the same time of day
+    if (timeSlot.startTime === section.timeSlot.startTime) {
+      details.push('keeps same time of day');
+    } else {
+      const originalHour = Math.floor(section.timeSlot.startTime / 60);
+      const newHour = Math.floor(timeSlot.startTime / 60);
+      if (originalHour < 12 && newHour < 12) {
+        details.push('stays in morning');
+      } else if (originalHour >= 12 && newHour >= 12) {
+        details.push('stays in afternoon');
+      } else {
+        details.push('shifts time of day');
+      }
+    }
+
+    // Check room availability (basic check)
+    const roomConflicts = sections.filter(s =>
+      s.id !== section.id &&
+      s.room.id === section.room.id &&
+      s.timeSlot.days.some(day => timeSlot.days.includes(day)) &&
+      s.timeSlot.startTime === timeSlot.startTime
+    );
+
+    if (roomConflicts.length === 0) {
+      details.push(`${section.room.name} available`);
+    }
+
+    return details.join(', ');
   };
 
   const findAvailableFaculty = (section: ScheduledSection, conflict: Conflict): Faculty[] => {
@@ -209,6 +479,12 @@ export default function ConflictResolutionWizard({
   };
 
   const handleApplySuggestion = (suggestion: ConflictSuggestion) => {
+    // Save to history for undo
+    setResolutionHistory(prev => [...prev, {
+      conflictId: currentConflict.id,
+      resolution: suggestion.resolution
+    }]);
+
     onResolveConflict(currentConflict.id, suggestion.resolution);
     setResolvedConflicts(prev => new Set([...prev, currentConflict.id]));
 
@@ -216,6 +492,48 @@ export default function ConflictResolutionWizard({
       setCurrentConflictIndex(prev => prev + 1);
     } else {
       onClose();
+    }
+  };
+
+  const handleUndo = () => {
+    if (resolutionHistory.length === 0) {
+      alert('No actions to undo');
+      return;
+    }
+
+    const lastResolution = resolutionHistory[resolutionHistory.length - 1];
+
+    // Create undo resolution
+    const undoResolution: ConflictResolution = {
+      type: 'undo',
+      sectionId: lastResolution.resolution.sectionId,
+      previousState: lastResolution.resolution.previousState,
+    };
+
+    // Restore previous state
+    if (lastResolution.resolution.previousState?.facultyId) {
+      undoResolution.newFacultyId = lastResolution.resolution.previousState.facultyId;
+    }
+    if (lastResolution.resolution.previousState?.timeSlot) {
+      undoResolution.newTimeSlot = lastResolution.resolution.previousState.timeSlot;
+    }
+
+    // Apply undo
+    onResolveConflict(lastResolution.conflictId, undoResolution);
+
+    // Remove from resolved conflicts
+    setResolvedConflicts(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(lastResolution.conflictId);
+      return newSet;
+    });
+
+    // Remove from history
+    setResolutionHistory(prev => prev.slice(0, -1));
+
+    // Go back if possible
+    if (currentConflictIndex > 0) {
+      setCurrentConflictIndex(prev => prev - 1);
     }
   };
 
@@ -321,6 +639,16 @@ export default function ConflictResolutionWizard({
                       {section.timeSlot.days.join('/')} {formatTimeRange12Hour(section.timeSlot.startTime, section.timeSlot.endTime)}
                     </p>
                     <p><strong>Room:</strong> {section.room.name}</p>
+                    {currentConflict.affectedSections.length > 1 && (
+                      <p className="text-yellow-700 font-semibold mt-2">
+                        ⚠️ Affects {currentConflict.affectedSections.length} sections total
+                      </p>
+                    )}
+                    {course.targetPrograms && course.targetPrograms.length > 0 && (
+                      <p className="mt-1">
+                        <strong>Student Impact:</strong> {course.targetPrograms.join(', ')} students
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -339,7 +667,11 @@ export default function ConflictResolutionWizard({
                 {suggestions.map((suggestion, idx) => (
                   <div
                     key={idx}
-                    className="border-2 border-gray-200 rounded-lg p-4 hover:border-uva-orange transition-colors"
+                    className={`border-2 rounded-lg p-4 transition-colors ${
+                      suggestion.cascadingIssues && suggestion.cascadingIssues.length > 0
+                        ? 'border-yellow-300 bg-yellow-50'
+                        : 'border-gray-200 hover:border-uva-orange'
+                    }`}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
@@ -347,15 +679,32 @@ export default function ConflictResolutionWizard({
                           <span className="text-xs font-semibold text-gray-500">
                             Score: {suggestion.score}/100
                           </span>
-                          {suggestion.score >= 70 && (
+                          {suggestion.score >= 70 && !suggestion.cascadingIssues?.length && (
                             <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">
                               Recommended
                             </span>
                           )}
+                          {suggestion.cascadingIssues && suggestion.cascadingIssues.length > 0 && (
+                            <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">
+                              ⚠️ May Create Issues
+                            </span>
+                          )}
                         </div>
-                        <p className="text-sm text-gray-900 font-medium">
+                        <p className="text-sm text-gray-900 font-medium mb-2">
                           {suggestion.description}
                         </p>
+                        {suggestion.cascadingIssues && suggestion.cascadingIssues.length > 0 && (
+                          <div className="mt-2 p-2 bg-yellow-100 border border-yellow-300 rounded text-xs">
+                            <p className="font-semibold text-yellow-900 mb-1">
+                              ⚠️ Warning: This may cause:
+                            </p>
+                            <ul className="list-disc list-inside text-yellow-800 space-y-0.5">
+                              {suggestion.cascadingIssues.map((issue, issueIdx) => (
+                                <li key={issueIdx}>{issue}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                       <button
                         onClick={() => handleApplySuggestion(suggestion)}
@@ -379,6 +728,14 @@ export default function ConflictResolutionWizard({
 
           {/* Action Buttons */}
           <div className="flex gap-3 mt-6 pt-6 border-t border-gray-200">
+            <button
+              onClick={handleUndo}
+              disabled={resolutionHistory.length === 0}
+              className="px-4 py-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              title={resolutionHistory.length > 0 ? `Undo last ${resolutionHistory.length} action(s)` : 'No actions to undo'}
+            >
+              ↶ Undo Last
+            </button>
             <button
               onClick={handleMarkReviewed}
               className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
