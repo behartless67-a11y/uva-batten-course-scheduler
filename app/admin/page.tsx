@@ -107,28 +107,31 @@ export default function AdminDashboard() {
         {/* Header */}
         <div className="bg-uva-navy text-white py-6 shadow-lg">
           <div className="max-w-[98vw] mx-auto px-4">
-            <h1 className="text-4xl font-bold">UVA Batten School</h1>
-            <p className="text-xl mt-2">Faculty Preferences - Admin Dashboard</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-4xl font-bold">UVA Batten School</h1>
+                <p className="text-xl mt-2">Faculty Preferences - Admin Dashboard</p>
+              </div>
+              <div className="flex gap-3">
+                <Link
+                  href="/"
+                  className="px-4 py-2 bg-white hover:bg-gray-100 text-uva-navy font-semibold rounded-lg transition-all"
+                >
+                  Main Scheduler
+                </Link>
+                <Link
+                  href="/faculty-submit"
+                  className="px-4 py-2 bg-uva-orange hover:bg-opacity-90 text-white font-semibold rounded-lg transition-all"
+                >
+                  Faculty Form
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Main Content */}
         <main className="max-w-[98vw] mx-auto px-4 py-8">
-          {/* Navigation */}
-          <div className="flex gap-4 mb-6">
-            <Link
-              href="/"
-              className="inline-flex items-center text-uva-navy hover:text-uva-orange transition-colors"
-            >
-              <span className="mr-2">←</span> Back to Scheduler
-            </Link>
-            <Link
-              href="/faculty-submit"
-              className="inline-flex items-center text-uva-navy hover:text-uva-orange transition-colors"
-            >
-              Faculty Submission Form
-            </Link>
-          </div>
 
           {/* Controls */}
           <div className="bg-white rounded-lg shadow-md p-6 mb-6">

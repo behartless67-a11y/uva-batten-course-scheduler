@@ -26,7 +26,8 @@
       "Bash(gh repo edit:*)",
       "Bash(gh api:*)",
       "Bash(npm install:*)",
-      "Bash(swa deploy:*)"
+      "Bash(swa deploy:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []
