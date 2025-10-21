@@ -11,7 +11,40 @@ import {
 } from '@/types/scheduling';
 
 /**
+ * Smart column value getter - handles column name variations
+ * Tries multiple possible column names (case-insensitive, ignores spaces/underscores)
+ */
+function getColumnValue(row: any, possibleNames: string[]): any {
+  // Direct match first
+  for (const name of possibleNames) {
+    if (row[name] !== undefined && row[name] !== null && row[name] !== '') {
+      return row[name];
+    }
+  }
+
+  // Case-insensitive and normalized match
+  const keys = Object.keys(row);
+  const normalize = (str: string) => str.toLowerCase().replace(/[_\s-]/g, '');
+
+  for (const possibleName of possibleNames) {
+    const normalizedPossible = normalize(possibleName);
+    const match = keys.find(k => {
+      const normalizedKey = normalize(k);
+      return normalizedKey === normalizedPossible ||
+        normalizedKey.includes(normalizedPossible) ||
+        normalizedPossible.includes(normalizedKey);
+    });
+    if (match && row[match] !== undefined && row[match] !== null && row[match] !== '') {
+      return row[match];
+    }
+  }
+
+  return undefined;
+}
+
+/**
  * Parse faculty preferences from Excel/CSV file
+ * Now with smart column matching!
  */
 export function parseFacultyPreferences(file: File): Promise<Faculty[]> {
   return new Promise((resolve, reject) => {
@@ -25,34 +58,39 @@ export function parseFacultyPreferences(file: File): Promise<Faculty[]> {
         const worksheet = workbook.Sheets[sheetName];
         const jsonData: FacultyPreferenceUpload[] = XLSX.utils.sheet_to_json(worksheet);
 
-        const faculty: Faculty[] = jsonData.map((row, index) => ({
-          id: `faculty-${index + 1}`,
-          name: row.facultyName,
-          email: row.email,
-          preferences: [
-            {
-              id: `pref-${index + 1}`,
-              preferredDays: row.preferredDays
-                ? parseDays(row.preferredDays)
-                : undefined,
-              avoidDays: row.cannotTeachDays
-                ? parseDays(row.cannotTeachDays)
-                : undefined,
-              priority: 'medium',
-            },
-          ],
-          hardConstraints: row.cannotTeachDays
-            ? [
-                {
-                  id: `constraint-${index + 1}`,
-                  type: 'cannot_teach_day',
-                  days: parseDays(row.cannotTeachDays),
-                  description: `Cannot teach on ${row.cannotTeachDays}`,
-                },
-              ]
-            : [],
-          shareParentingWith: row.shareParentingWith,
-        }));
+        const faculty: Faculty[] = jsonData.map((row, index) => {
+          // Smart column matching
+          const name = getColumnValue(row, ['facultyName', 'name', 'faculty', 'instructor', 'professor']);
+          const email = getColumnValue(row, ['email', 'emailAddress', 'mail']);
+          const preferredDays = getColumnValue(row, ['preferredDays', 'preferred_days', 'prefers', 'prefersDays']);
+          const cannotTeachDays = getColumnValue(row, ['cannotTeachDays', 'cannot_teach_days', 'avoidDays', 'avoid_days', 'unavailable']);
+          const shareParenting = getColumnValue(row, ['shareParentingWith', 'share_parenting_with', 'partner', 'partnerFaculty']);
+
+          return {
+            id: `faculty-${index + 1}`,
+            name: name || `Faculty ${index + 1}`,
+            email: email,
+            preferences: [
+              {
+                id: `pref-${index + 1}`,
+                preferredDays: preferredDays ? parseDays(preferredDays) : undefined,
+                avoidDays: cannotTeachDays ? parseDays(cannotTeachDays) : undefined,
+                priority: 'medium',
+              },
+            ],
+            hardConstraints: cannotTeachDays
+              ? [
+                  {
+                    id: `constraint-${index + 1}`,
+                    type: 'cannot_teach_day',
+                    days: parseDays(cannotTeachDays),
+                    description: `Cannot teach on ${cannotTeachDays}`,
+                  },
+                ]
+              : [],
+            shareParentingWith: shareParenting,
+          };
+        });
 
         resolve(faculty);
       } catch (error) {

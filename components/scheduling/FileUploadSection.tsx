@@ -59,17 +59,17 @@ export default function FileUploadSection({ onFilesUploaded }: FileUploadSection
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-8 w-full">
-      <h2 className="text-2xl font-bold text-uva-navy mb-6">Upload Course and Faculty Data</h2>
+    <div className="bg-white rounded-lg shadow-md p-6 w-full">
+      <h2 className="text-3xl font-bold text-uva-navy mb-4">Upload Course and Faculty Data</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
         {/* Faculty Preferences Upload */}
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 hover:border-uva-orange transition-colors">
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-5 hover:border-uva-orange transition-colors">
           <div className="text-center">
-            <FileSpreadsheet className="w-12 h-12 text-uva-orange mx-auto mb-3" />
-            <h3 className="font-semibold text-gray-900 mb-2">Faculty Preferences</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Upload an Excel or CSV file with faculty teaching preferences
+            <FileSpreadsheet className="w-10 h-10 text-uva-orange mx-auto mb-2" />
+            <h3 className="font-bold text-lg text-gray-900 mb-2">Faculty Preferences</h3>
+            <p className="text-base text-gray-600 mb-3">
+              Upload Excel or CSV with faculty preferences
             </p>
 
             <label className="cursor-pointer">
@@ -79,7 +79,7 @@ export default function FileUploadSection({ onFilesUploaded }: FileUploadSection
                 onChange={handleFacultyFileChange}
                 className="hidden"
               />
-              <span className="inline-block px-4 py-2 bg-uva-navy text-white rounded-lg hover:bg-uva-blue-light transition-colors">
+              <span className="inline-block px-5 py-2.5 text-base bg-uva-navy text-white rounded-lg hover:bg-uva-blue-light transition-colors font-semibold">
                 Choose File
               </span>
             </label>
@@ -92,40 +92,22 @@ export default function FileUploadSection({ onFilesUploaded }: FileUploadSection
             )}
           </div>
 
-          <div className="mt-6 text-sm text-gray-600 text-left">
-            <p className="font-semibold mb-3 text-base">Expected columns:</p>
-            <ul className="space-y-2">
-              <li className="flex items-start gap-2">
-                <span className="text-uva-orange mt-1">•</span>
-                <span><strong>facultyName</strong></span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-uva-orange mt-1">•</span>
-                <span><strong>email</strong> (optional)</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-uva-orange mt-1">•</span>
-                <span><strong>preferredDays</strong></span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-uva-orange mt-1">•</span>
-                <span><strong>cannotTeachDays</strong></span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-uva-orange mt-1">•</span>
-                <span><strong>shareParentingWith</strong> (optional)</span>
-              </li>
-            </ul>
+          <div className="mt-4 text-left">
+            <p className="font-bold mb-2 text-base text-gray-700">Expected columns:</p>
+            <div className="text-base text-gray-600 space-y-1">
+              <div><strong className="text-uva-navy">facultyName</strong>, <strong className="text-uva-navy">preferredDays</strong>, <strong className="text-uva-navy">cannotTeachDays</strong></div>
+              <div className="text-sm text-gray-500">Optional: email, shareParentingWith</div>
+            </div>
           </div>
         </div>
 
         {/* Course Data Upload */}
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 hover:border-uva-orange transition-colors">
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-5 hover:border-uva-orange transition-colors">
           <div className="text-center">
-            <Upload className="w-12 h-12 text-uva-orange mx-auto mb-3" />
-            <h3 className="font-semibold text-gray-900 mb-2">Course Data</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Upload an Excel or CSV file with course information
+            <Upload className="w-10 h-10 text-uva-orange mx-auto mb-2" />
+            <h3 className="font-bold text-lg text-gray-900 mb-2">Course Data</h3>
+            <p className="text-base text-gray-600 mb-3">
+              Upload Excel or CSV with course information
             </p>
 
             <label className="cursor-pointer">
@@ -135,7 +117,7 @@ export default function FileUploadSection({ onFilesUploaded }: FileUploadSection
                 onChange={handleCourseFileChange}
                 className="hidden"
               />
-              <span className="inline-block px-4 py-2 bg-uva-navy text-white rounded-lg hover:bg-uva-blue-light transition-colors">
+              <span className="inline-block px-5 py-2.5 text-base bg-uva-navy text-white rounded-lg hover:bg-uva-blue-light transition-colors font-semibold">
                 Choose File
               </span>
             </label>
@@ -148,42 +130,12 @@ export default function FileUploadSection({ onFilesUploaded }: FileUploadSection
             )}
           </div>
 
-          <div className="mt-6 text-sm text-gray-600 text-left">
-            <p className="font-semibold mb-3 text-base">Expected columns:</p>
-            <ul className="space-y-2">
-              <li className="flex items-start gap-2">
-                <span className="text-uva-orange mt-1">•</span>
-                <span><strong>code</strong> (e.g., LPPA 7110)</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-uva-orange mt-1">•</span>
-                <span><strong>name</strong></span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-uva-orange mt-1">•</span>
-                <span><strong>type</strong> (Core/Elective/Capstone)</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-uva-orange mt-1">•</span>
-                <span><strong>faculty</strong></span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-uva-orange mt-1">•</span>
-                <span><strong>enrollmentCap</strong></span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-uva-orange mt-1">•</span>
-                <span><strong>numberOfSections</strong></span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-uva-orange mt-1">•</span>
-                <span><strong>duration</strong> (minutes)</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-uva-orange mt-1">•</span>
-                <span><strong>sessionsPerWeek</strong></span>
-              </li>
-            </ul>
+          <div className="mt-4 text-left">
+            <p className="font-bold mb-2 text-base text-gray-700">Expected columns:</p>
+            <div className="text-base text-gray-600 space-y-1">
+              <div><strong className="text-uva-navy">code</strong>, <strong className="text-uva-navy">name</strong>, <strong className="text-uva-navy">type</strong>, <strong className="text-uva-navy">faculty</strong></div>
+              <div><strong className="text-uva-navy">enrollmentCap</strong>, <strong className="text-uva-navy">numberOfSections</strong>, <strong className="text-uva-navy">duration</strong>, <strong className="text-uva-navy">sessionsPerWeek</strong></div>
+            </div>
           </div>
         </div>
       </div>

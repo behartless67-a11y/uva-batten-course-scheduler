@@ -13,7 +13,13 @@
       "Bash(npm run dev:*)",
       "Read(//c/Users/bh4hb/Desktop/AI_Working/**)",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nInitial commit: UVA Batten Course Scheduling Tool\n\n- Full-featured CSP-based scheduling algorithm with greedy fallback\n- Excel/CSV file upload for faculty preferences and course data\n- Conflict detection and visualization\n- Grid and list schedule views with 12-hour time format\n- Room assignment based on priority rules (Dell, Rouss, Pavilion VIII)\n- Export to Excel functionality\n- UVA Batten branding with Garrett Hall background\n- Comprehensive REQUIREMENTS.md for scheduling criteria\n- Sample CSV templates for faculty and courses\n\nBuilt for Judy and the UVA Batten Course Scheduling Team\nOctober 2025\nEOF\n)\")",
+      "Bash(gh repo create:*)",
+      "Bash(git commit:*)",
+      "Bash(git push)",
+      "Bash(xcopy:*)",
+      "Bash(robocopy:*)"
     ],
     "deny": [],
     "ask": []
