@@ -161,12 +161,20 @@ export default function FileUploadSection({ onFilesUploaded }: FileUploadSection
           Download sample Excel templates to see the expected format:
         </p>
         <div className="flex gap-3">
-          <button className="text-sm text-uva-orange hover:text-uva-orange-light font-medium">
+          <a
+            href="/templates/faculty-template.csv"
+            download="faculty-template.csv"
+            className="text-sm text-uva-orange hover:text-uva-orange-light font-medium underline cursor-pointer"
+          >
             Download Faculty Template
-          </button>
-          <button className="text-sm text-uva-orange hover:text-uva-orange-light font-medium">
+          </a>
+          <a
+            href="/templates/course-template.csv"
+            download="course-template.csv"
+            className="text-sm text-uva-orange hover:text-uva-orange-light font-medium underline cursor-pointer"
+          >
             Download Course Template
-          </button>
+          </a>
         </div>
       </div>
     </div>

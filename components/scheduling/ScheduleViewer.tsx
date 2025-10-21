@@ -16,12 +16,51 @@ export default function ScheduleViewer({ schedule, courses, faculty }: ScheduleV
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterLevel, setFilterLevel] = useState<'all' | 'undergraduate' | 'graduate'>('all');
+  const [localSchedule, setLocalSchedule] = useState(schedule);
+  const [draggedFaculty, setDraggedFaculty] = useState<Faculty | null>(null);
+  const [dragOverSection, setDragOverSection] = useState<string | null>(null);
 
   const courseMap = new Map(courses.map(c => [c.id, c]));
   const facultyMap = new Map(faculty.map(f => [f.id, f]));
 
+  const handleFacultyDragStart = (e: React.DragEvent, faculty: Faculty) => {
+    setDraggedFaculty(faculty);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleSectionDragOver = (e: React.DragEvent, sectionId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverSection(sectionId);
+  };
+
+  const handleSectionDragLeave = () => {
+    setDragOverSection(null);
+  };
+
+  const handleSectionDrop = (e: React.DragEvent, sectionId: string) => {
+    e.preventDefault();
+    setDragOverSection(null);
+
+    if (!draggedFaculty) return;
+
+    // Update the section with new faculty
+    const updatedSections = localSchedule.sections.map(section =>
+      section.id === sectionId
+        ? { ...section, facultyId: draggedFaculty.id }
+        : section
+    );
+
+    setLocalSchedule({
+      ...localSchedule,
+      sections: updatedSections,
+    });
+
+    setDraggedFaculty(null);
+  };
+
   // Filter sections
-  const filteredSections = schedule.sections.filter(section => {
+  const filteredSections = localSchedule.sections.filter(section => {
     const course = courseMap.get(section.courseId);
     const facultyMember = facultyMap.get(section.facultyId);
 
@@ -41,18 +80,18 @@ export default function ScheduleViewer({ schedule, courses, faculty }: ScheduleV
 
   const handleExportSchedule = () => {
     const enrichedSchedule = {
-      ...schedule,
-      sections: schedule.sections.map(section => ({
+      ...localSchedule,
+      sections: localSchedule.sections.map(section => ({
         ...section,
         course: courseMap.get(section.courseId),
         faculty: facultyMap.get(section.facultyId),
       })),
     };
-    exportScheduleToExcel(enrichedSchedule, `${schedule.name}.xlsx`);
+    exportScheduleToExcel(enrichedSchedule, `${localSchedule.name}.xlsx`);
   };
 
   const handleExportConflicts = () => {
-    exportConflictsToExcel(schedule.conflicts, `${schedule.name}-conflicts.xlsx`);
+    exportConflictsToExcel(localSchedule.conflicts, `${localSchedule.name}-conflicts.xlsx`);
   };
 
   return (
@@ -134,10 +173,46 @@ export default function ScheduleViewer({ schedule, courses, faculty }: ScheduleV
 
       {/* Content */}
       <div className="p-6">
+        {/* Faculty Panel for Drag & Drop */}
+        <div className="mb-6 bg-gray-50 rounded-lg p-4 border border-gray-200">
+          <h3 className="font-semibold text-gray-900 mb-3">Faculty Members (Drag to Reassign)</h3>
+          <div className="flex flex-wrap gap-2">
+            {faculty.map(f => (
+              <div
+                key={f.id}
+                draggable
+                onDragStart={(e) => handleFacultyDragStart(e, f)}
+                className="px-3 py-2 bg-white border-2 border-uva-navy rounded-lg cursor-move hover:bg-uva-navy hover:text-white transition-colors text-sm font-medium"
+              >
+                {f.name}
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-gray-600 mt-2">
+            💡 Drag a faculty member onto any course section below to reassign them
+          </p>
+        </div>
+
         {viewMode === 'grid' ? (
-          <GridView sections={filteredSections} courseMap={courseMap} facultyMap={facultyMap} />
+          <GridView
+            sections={filteredSections}
+            courseMap={courseMap}
+            facultyMap={facultyMap}
+            onSectionDragOver={handleSectionDragOver}
+            onSectionDragLeave={handleSectionDragLeave}
+            onSectionDrop={handleSectionDrop}
+            dragOverSection={dragOverSection}
+          />
         ) : (
-          <ListView sections={filteredSections} courseMap={courseMap} facultyMap={facultyMap} />
+          <ListView
+            sections={filteredSections}
+            courseMap={courseMap}
+            facultyMap={facultyMap}
+            onSectionDragOver={handleSectionDragOver}
+            onSectionDragLeave={handleSectionDragLeave}
+            onSectionDrop={handleSectionDrop}
+            dragOverSection={dragOverSection}
+          />
         )}
       </div>
     </div>
@@ -149,10 +224,18 @@ function GridView({
   sections,
   courseMap,
   facultyMap,
+  onSectionDragOver,
+  onSectionDragLeave,
+  onSectionDrop,
+  dragOverSection,
 }: {
   sections: ScheduledSection[];
   courseMap: Map<string, Course>;
   facultyMap: Map<string, Faculty>;
+  onSectionDragOver: (e: React.DragEvent, sectionId: string) => void;
+  onSectionDragLeave: () => void;
+  onSectionDrop: (e: React.DragEvent, sectionId: string) => void;
+  dragOverSection: string | null;
 }) {
   const days = [DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY];
 
@@ -212,17 +295,30 @@ function GridView({
                       {sectionsInSlot.map(section => {
                         const course = courseMap.get(section.courseId);
                         const facultyMember = facultyMap.get(section.facultyId);
+                        const isDragOver = dragOverSection === section.id;
                         return (
                           <div
                             key={section.id}
-                            className="bg-uva-orange bg-opacity-10 border-l-4 border-uva-orange rounded p-2 text-sm hover:bg-opacity-20 transition-colors cursor-pointer"
+                            onDragOver={(e) => onSectionDragOver(e, section.id)}
+                            onDragLeave={onSectionDragLeave}
+                            onDrop={(e) => onSectionDrop(e, section.id)}
+                            className={`border-l-4 rounded p-2 text-sm transition-all cursor-pointer ${
+                              isDragOver
+                                ? 'bg-green-100 border-green-500 ring-2 ring-green-500'
+                                : 'bg-uva-orange bg-opacity-10 border-uva-orange hover:bg-opacity-20'
+                            }`}
                           >
                             <p className="font-semibold text-uva-navy">{course?.code}</p>
                             <p className="text-xs text-gray-700 mt-1">{course?.name}</p>
-                            <p className="text-xs text-gray-600 mt-1">{facultyMember?.name}</p>
+                            <p className="text-xs text-gray-600 mt-1 font-medium">{facultyMember?.name}</p>
                             <p className="text-xs text-gray-500 mt-1">
                               {section.room.name} ({section.enrollmentCap} students)
                             </p>
+                            {isDragOver && (
+                              <p className="text-xs text-green-700 font-semibold mt-1">
+                                Drop to reassign
+                              </p>
+                            )}
                           </div>
                         );
                       })}
@@ -243,21 +339,37 @@ function ListView({
   sections,
   courseMap,
   facultyMap,
+  onSectionDragOver,
+  onSectionDragLeave,
+  onSectionDrop,
+  dragOverSection,
 }: {
   sections: ScheduledSection[];
   courseMap: Map<string, Course>;
   facultyMap: Map<string, Faculty>;
+  onSectionDragOver: (e: React.DragEvent, sectionId: string) => void;
+  onSectionDragLeave: () => void;
+  onSectionDrop: (e: React.DragEvent, sectionId: string) => void;
+  dragOverSection: string | null;
 }) {
   return (
     <div className="space-y-3">
       {sections.map(section => {
         const course = courseMap.get(section.courseId);
         const facultyMember = facultyMap.get(section.facultyId);
+        const isDragOver = dragOverSection === section.id;
 
         return (
           <div
             key={section.id}
-            className="border border-gray-200 rounded-lg p-4 hover:border-uva-orange transition-colors"
+            onDragOver={(e) => onSectionDragOver(e, section.id)}
+            onDragLeave={onSectionDragLeave}
+            onDrop={(e) => onSectionDrop(e, section.id)}
+            className={`border rounded-lg p-4 transition-all ${
+              isDragOver
+                ? 'border-green-500 ring-2 ring-green-500 bg-green-50'
+                : 'border-gray-200 hover:border-uva-orange'
+            }`}
           >
             <div className="flex items-start justify-between">
               <div className="flex-1">
