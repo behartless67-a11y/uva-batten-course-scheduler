@@ -44,6 +44,78 @@ export default function ScheduleViewer({ schedule, courses, faculty }: ScheduleV
 
     if (!draggedFaculty) return;
 
+    // Get the section being modified
+    const targetSection = localSchedule.sections.find(s => s.id === sectionId);
+    if (!targetSection) return;
+
+    // Check for conflicts
+    const warnings: string[] = [];
+
+    // Check if faculty cannot teach on these days
+    const sectionDays = targetSection.timeSlot.days;
+    const cannotTeachDays = draggedFaculty.cannotTeachDays || [];
+    const conflictingDays = sectionDays.filter(day =>
+      cannotTeachDays.some(cannotDay => day.toLowerCase().includes(cannotDay.toLowerCase()))
+    );
+
+    if (conflictingDays.length > 0) {
+      warnings.push(`⚠️ ${draggedFaculty.name} CANNOT teach on ${conflictingDays.join(', ')}`);
+    }
+
+    // Check if outside preferred days
+    const preferredDays = draggedFaculty.preferredDays || [];
+    if (preferredDays.length > 0) {
+      const nonPreferredDays = sectionDays.filter(day =>
+        !preferredDays.some(prefDay => day.toLowerCase().includes(prefDay.toLowerCase()))
+      );
+      if (nonPreferredDays.length > 0) {
+        warnings.push(`ℹ️ ${draggedFaculty.name} prefers not to teach on ${nonPreferredDays.join(', ')}`);
+      }
+    }
+
+    // Check for time conflicts with other courses this faculty teaches
+    const facultyOtherSections = localSchedule.sections.filter(
+      s => s.facultyId === draggedFaculty.id && s.id !== sectionId
+    );
+
+    const hasTimeConflict = facultyOtherSections.some(otherSection => {
+      const sameDays = targetSection.timeSlot.days.some(day =>
+        otherSection.timeSlot.days.includes(day)
+      );
+      const sameTime =
+        targetSection.timeSlot.startTime === otherSection.timeSlot.startTime &&
+        targetSection.timeSlot.endTime === otherSection.timeSlot.endTime;
+      return sameDays && sameTime;
+    });
+
+    if (hasTimeConflict) {
+      const conflictCourse = facultyOtherSections.find(otherSection => {
+        const sameDays = targetSection.timeSlot.days.some(day =>
+          otherSection.timeSlot.days.includes(day)
+        );
+        const sameTime =
+          targetSection.timeSlot.startTime === otherSection.timeSlot.startTime &&
+          targetSection.timeSlot.endTime === otherSection.timeSlot.endTime;
+        return sameDays && sameTime;
+      });
+      const conflictCourseName = conflictCourse ? courseMap.get(conflictCourse.courseId)?.code : 'another course';
+      warnings.push(`❌ TIME CONFLICT: ${draggedFaculty.name} is already teaching ${conflictCourseName} at this time`);
+    }
+
+    // Show warnings if any exist
+    if (warnings.length > 0) {
+      const proceed = confirm(
+        `Warning: Assigning ${draggedFaculty.name} to this section may cause issues:\n\n` +
+        warnings.join('\n\n') +
+        '\n\nDo you want to proceed anyway?'
+      );
+
+      if (!proceed) {
+        setDraggedFaculty(null);
+        return;
+      }
+    }
+
     // Update the section with new faculty
     const updatedSections = localSchedule.sections.map(section =>
       section.id === sectionId
