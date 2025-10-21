@@ -35,6 +35,18 @@ jobs:
       - name: Build Next.js app with static export
         run: npm run build
 
+      - name: Verify out folder exists
+        run: |
+          echo "Checking for out folder..."
+          ls -la
+          if [ -d "out" ]; then
+            echo "out folder found!"
+            ls -la out
+          else
+            echo "ERROR: out folder not found!"
+            exit 1
+          fi
+
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1

@@ -27,7 +27,16 @@
       "Bash(gh api:*)",
       "Bash(npm install:*)",
       "Bash(swa deploy:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(if exist appapi ren appapi api-backup)",
+      "Bash(move:*)",
+      "Bash(timeout 5 swa:*)",
+      "Bash(gh secret set:*)",
+      "Bash(gh run:*)",
+      "Bash(cat:*)",
+      "Bash(pkill:*)",
+      "Bash(git pull:*)",
+      "Bash(git stash:*)"
     ],
     "deny": [],
     "ask": []
