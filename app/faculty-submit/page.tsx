@@ -6,9 +6,22 @@ import { Calendar } from 'lucide-react';
 
 const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const timeSlotOptions = ['Morning (before 12pm)', 'Afternoon (12pm-5pm)', 'Evening (after 5pm)'];
+const courseTypes = ['Core', 'Elective', 'Capstone'];
+const durationOptions = [75, 80, 150];
+const sessionsPerWeekOptions = [1, 2, 4];
+const targetProgramOptions = [
+  'MPP Year 1',
+  'MPP Year 2',
+  'BA Year 2',
+  'BA Year 3',
+  'BA Year 4',
+  'Minor',
+  'Certificate'
+];
 
 export default function FacultySubmitPage() {
   const [formData, setFormData] = useState({
+    // Faculty Info
     facultyName: '',
     email: '',
     preferredDays: [] as string[],
@@ -16,6 +29,18 @@ export default function FacultySubmitPage() {
     preferredTimeSlots: [] as string[],
     shareParentingWith: '',
     additionalNotes: '',
+
+    // Course Info
+    courseCode: '',
+    courseName: '',
+    courseType: 'Core',
+    enrollmentCap: '',
+    numberOfSections: '2',
+    numberOfDiscussions: '0',
+    duration: '80',
+    sessionsPerWeek: '2',
+    targetPrograms: [] as string[],
+    courseNotes: '',
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,6 +65,15 @@ export default function FacultySubmitPage() {
     }));
   };
 
+  const handleTargetProgramToggle = (program: string) => {
+    setFormData(prev => ({
+      ...prev,
+      targetPrograms: prev.targetPrograms.includes(program)
+        ? prev.targetPrograms.filter(p => p !== program)
+        : [...prev.targetPrograms, program],
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -51,6 +85,7 @@ export default function FacultySubmitPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          // Faculty Info
           facultyName: formData.facultyName,
           email: formData.email,
           preferredDays: formData.preferredDays.join(','),
@@ -58,6 +93,18 @@ export default function FacultySubmitPage() {
           preferredTimeSlots: formData.preferredTimeSlots.join(','),
           shareParentingWith: formData.shareParentingWith,
           additionalNotes: formData.additionalNotes,
+
+          // Course Info
+          courseCode: formData.courseCode,
+          courseName: formData.courseName,
+          courseType: formData.courseType,
+          enrollmentCap: formData.enrollmentCap,
+          numberOfSections: formData.numberOfSections,
+          numberOfDiscussions: formData.numberOfDiscussions,
+          duration: formData.duration,
+          sessionsPerWeek: formData.sessionsPerWeek,
+          targetPrograms: formData.targetPrograms.join(','),
+          courseNotes: formData.courseNotes,
         }),
       });
 
@@ -76,6 +123,16 @@ export default function FacultySubmitPage() {
         preferredTimeSlots: [],
         shareParentingWith: '',
         additionalNotes: '',
+        courseCode: '',
+        courseName: '',
+        courseType: 'Core',
+        enrollmentCap: '',
+        numberOfSections: '2',
+        numberOfDiscussions: '0',
+        duration: '80',
+        sessionsPerWeek: '2',
+        targetPrograms: [],
+        courseNotes: '',
       });
     } catch (error: any) {
       console.error('Submission error:', error);
@@ -112,7 +169,7 @@ export default function FacultySubmitPage() {
                 <div>
                   <h1 className="text-3xl font-bold font-serif">UVA Batten Course Scheduling Tool</h1>
                   <p className="text-sm text-gray-300 mt-1">
-                    Faculty Teaching Preferences
+                    Course & Teaching Preferences Submission
                   </p>
                 </div>
               </div>
@@ -141,12 +198,12 @@ export default function FacultySubmitPage() {
           <div className="bg-white rounded-lg shadow-md p-8">
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-uva-navy mb-2">
-                Submit Your Teaching Preferences
+                Submit Course and Teaching Preferences
               </h2>
               <p className="text-gray-600">
-                Please fill out this form to let us know your teaching day and time preferences
-                for the upcoming semester. This information will be used to create the course
-                schedule.
+                Please provide your course information and teaching preferences for the upcoming
+                semester. This comprehensive form collects both course details and your scheduling
+                preferences to help us create an optimal schedule.
               </p>
             </div>
 
@@ -200,6 +257,204 @@ export default function FacultySubmitPage() {
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-uva-orange focus:border-transparent text-base"
                   placeholder="jsmith@virginia.edu"
                 />
+              </div>
+
+              {/* Section Divider */}
+              <div className="border-t-2 border-uva-navy pt-6 mt-8">
+                <h3 className="text-xl font-bold text-uva-navy mb-2">Course Information</h3>
+                <p className="text-gray-600 text-sm">
+                  Please provide information about the course(s) you will be teaching
+                </p>
+              </div>
+
+              {/* Course Code */}
+              <div>
+                <label htmlFor="courseCode" className="block font-semibold text-gray-800 mb-2">
+                  Course Code <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="courseCode"
+                  required
+                  value={formData.courseCode}
+                  onChange={e => setFormData(prev => ({ ...prev, courseCode: e.target.value }))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-uva-orange focus:border-transparent text-base"
+                  placeholder="LPPA 7110"
+                />
+              </div>
+
+              {/* Course Name */}
+              <div>
+                <label htmlFor="courseName" className="block font-semibold text-gray-800 mb-2">
+                  Course Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="courseName"
+                  required
+                  value={formData.courseName}
+                  onChange={e => setFormData(prev => ({ ...prev, courseName: e.target.value }))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-uva-orange focus:border-transparent text-base"
+                  placeholder="Economics 2"
+                />
+              </div>
+
+              {/* Course Type and Enrollment Cap - Side by Side */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="courseType" className="block font-semibold text-gray-800 mb-2">
+                    Course Type <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="courseType"
+                    required
+                    value={formData.courseType}
+                    onChange={e => setFormData(prev => ({ ...prev, courseType: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-uva-orange focus:border-transparent text-base"
+                  >
+                    {courseTypes.map(type => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="enrollmentCap" className="block font-semibold text-gray-800 mb-2">
+                    Enrollment Cap <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    id="enrollmentCap"
+                    required
+                    min="1"
+                    value={formData.enrollmentCap}
+                    onChange={e => setFormData(prev => ({ ...prev, enrollmentCap: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-uva-orange focus:border-transparent text-base"
+                    placeholder="30"
+                  />
+                </div>
+              </div>
+
+              {/* Number of Sections and Discussions - Side by Side */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="numberOfSections" className="block font-semibold text-gray-800 mb-2">
+                    Number of Sections <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="numberOfSections"
+                    required
+                    value={formData.numberOfSections}
+                    onChange={e => setFormData(prev => ({ ...prev, numberOfSections: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-uva-orange focus:border-transparent text-base"
+                  >
+                    {[1, 2, 3, 4, 5, 6].map(num => (
+                      <option key={num} value={num}>{num}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="numberOfDiscussions" className="block font-semibold text-gray-800 mb-2">
+                    Number of Discussion Sections
+                  </label>
+                  <select
+                    id="numberOfDiscussions"
+                    value={formData.numberOfDiscussions}
+                    onChange={e => setFormData(prev => ({ ...prev, numberOfDiscussions: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-uva-orange focus:border-transparent text-base"
+                  >
+                    {[0, 2, 4, 6, 8, 10, 12, 14].map(num => (
+                      <option key={num} value={num}>{num}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Duration and Sessions Per Week - Side by Side */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="duration" className="block font-semibold text-gray-800 mb-2">
+                    Class Duration (minutes) <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="duration"
+                    required
+                    value={formData.duration}
+                    onChange={e => setFormData(prev => ({ ...prev, duration: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-uva-orange focus:border-transparent text-base"
+                  >
+                    {durationOptions.map(dur => (
+                      <option key={dur} value={dur}>{dur} minutes</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="sessionsPerWeek" className="block font-semibold text-gray-800 mb-2">
+                    Sessions Per Week <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="sessionsPerWeek"
+                    required
+                    value={formData.sessionsPerWeek}
+                    onChange={e => setFormData(prev => ({ ...prev, sessionsPerWeek: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-uva-orange focus:border-transparent text-base"
+                  >
+                    {sessionsPerWeekOptions.map(num => (
+                      <option key={num} value={num}>{num} session{num > 1 ? 's' : ''} per week</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Target Programs */}
+              <div>
+                <label className="block font-semibold text-gray-800 mb-2">
+                  Target Student Programs <span className="text-red-500">*</span>
+                </label>
+                <p className="text-sm text-gray-600 mb-3">
+                  Select all student groups this course is designed for
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {targetProgramOptions.map(program => (
+                    <button
+                      key={program}
+                      type="button"
+                      onClick={() => handleTargetProgramToggle(program)}
+                      className={`px-4 py-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                        formData.targetPrograms.includes(program)
+                          ? 'bg-uva-orange text-white border-uva-orange'
+                          : 'bg-white text-gray-700 border-gray-300 hover:border-uva-orange'
+                      }`}
+                    >
+                      {program}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Course Notes */}
+              <div>
+                <label htmlFor="courseNotes" className="block font-semibold text-gray-800 mb-2">
+                  Course-Specific Notes
+                </label>
+                <textarea
+                  id="courseNotes"
+                  rows={3}
+                  value={formData.courseNotes}
+                  onChange={e => setFormData(prev => ({ ...prev, courseNotes: e.target.value }))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-uva-orange focus:border-transparent text-base"
+                  placeholder="Any special requirements for this course..."
+                />
+              </div>
+
+              {/* Section Divider */}
+              <div className="border-t-2 border-uva-navy pt-6 mt-8">
+                <h3 className="text-xl font-bold text-uva-navy mb-2">Teaching Preferences</h3>
+                <p className="text-gray-600 text-sm">
+                  Let us know your preferred days and times for teaching
+                </p>
               </div>
 
               {/* Preferred Days */}
