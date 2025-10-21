@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
+import { Calendar } from 'lucide-react';
 import { FacultySubmissionEntity } from '@/lib/azure/tableStorage';
 
 export default function AdminDashboard() {
@@ -116,12 +117,17 @@ export default function AdminDashboard() {
 
       <div className="min-h-screen">
         {/* Header */}
-        <div className="bg-uva-navy text-white py-6 shadow-lg">
-          <div className="max-w-[98vw] mx-auto px-4">
+        <header className="bg-uva-navy text-white shadow-lg">
+          <div className="max-w-[98vw] mx-auto px-4 py-6">
             <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-4xl font-bold">UVA Batten School</h1>
-                <p className="text-xl mt-2">Faculty Preferences - Admin Dashboard</p>
+              <div className="flex items-center gap-3">
+                <Calendar className="w-8 h-8 text-uva-orange" />
+                <div>
+                  <h1 className="text-3xl font-bold font-serif">UVA Batten Course Scheduling Tool</h1>
+                  <p className="text-sm text-gray-300 mt-1">
+                    Faculty Preferences - Admin Dashboard
+                  </p>
+                </div>
               </div>
               <div className="flex gap-3">
                 <Link
@@ -139,7 +145,7 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
-        </div>
+        </header>
 
         {/* Main Content */}
         <main className="max-w-[98vw] mx-auto px-4 py-8">
