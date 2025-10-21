@@ -6,27 +6,55 @@
 
 An automated course scheduling application for the UVA Frank Batten School of Leadership and Public Policy. This tool uses constraint satisfaction problem (CSP) algorithms with greedy fallback to generate optimal course schedules while respecting faculty preferences, room constraints, and student cohort requirements.
 
-**Built for:** Judy and the UVA Batten Course Scheduling Team
+**Built for:** Heather and the UVA Batten Course Scheduling Team
 **Developed:** October 2025
 **Status:** Production Ready
 
 ## Features
 
+### Core Scheduling Engine
+
 - **Automated Schedule Generation**: CSP-based algorithm that automatically assigns time slots and rooms
 - **Constraint Satisfaction**: Enforces hard and soft constraints including:
   - Faculty availability and preferences
-  - Room capacity and priority assignment
+  - Room capacity and priority assignment (Dell → Rouss → Pavilion VIII)
   - Student cohort conflicts
   - Batten Hour protection (Monday 12:30-1:30)
   - Core course distribution (morning/afternoon offerings)
   - Parenting partner considerations
   - Elective distribution limits
 
-- **File Upload**: Import faculty preferences and course data from Excel/CSV files
+- **Smart File Upload**: Import faculty preferences and course data from Excel/CSV files
+  - Intelligent column matching (handles variations in column names)
+  - Support for both .xlsx and .csv formats
+  - Validation and error reporting
+
 - **Conflict Detection**: Automatic detection and visualization of scheduling conflicts
 - **Multiple Views**: Grid (calendar) and list views for schedule visualization
 - **Search & Filter**: Filter by course level, search by course code or faculty name
 - **Export Functionality**: Export schedules and conflicts to Excel
+
+### Faculty Preference Collection System 🆕
+
+- **Online Submission Form** (`/faculty-submit`): Faculty can submit teaching preferences remotely
+  - Preferred teaching days
+  - Days they cannot teach
+  - Time slot preferences
+  - Parenting partner information
+  - Additional notes and constraints
+
+- **Admin Dashboard** (`/admin`): Manage all faculty submissions
+  - View all submissions in sortable table
+  - Search and filter by faculty name or email
+  - Export to Excel with one click
+  - Delete outdated submissions
+  - Real-time data refresh
+
+- **Flexible Storage**:
+  - Mock storage for local development (no setup required)
+  - Azure Table Storage integration for production (optional)
+
+📖 **See [FACULTY_SUBMISSION_SETUP.md](FACULTY_SUBMISSION_SETUP.md) for detailed setup guide**
 
 ## Getting Started
 
