@@ -6,6 +6,7 @@ import FileUploadSection, { TemplateDownloadSection } from '@/components/schedul
 import ScheduleViewer from '@/components/scheduling/ScheduleViewer';
 import ConflictPanel from '@/components/scheduling/ConflictPanel';
 import { Schedule, Faculty, Course, SchedulerConfig, Semester } from '@/types/scheduling';
+import { CourseScheduler } from '@/lib/scheduling/scheduler';
 
 export default function Home() {
   const [step, setStep] = useState<'upload' | 'configure' | 'viewing'>('upload');
@@ -36,20 +37,16 @@ export default function Home() {
     setError(null);
 
     try {
-      const response = await fetch('/api/schedules', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ config, courses, faculty }),
-      });
+      // Use client-side scheduler instead of API call
+      const scheduler = new CourseScheduler(config, courses, faculty);
+      const result = scheduler.generateSchedule();
 
-      const data = await response.json();
-
-      if (!data.success) {
-        setError(data.error || 'Failed to generate schedule');
+      if (!result.success || !result.schedule) {
+        setError(result.errors?.join(', ') || 'Failed to generate schedule');
         return;
       }
 
-      setSchedule(data.schedule);
+      setSchedule(result.schedule);
       setStep('viewing');
     } catch (err) {
       setError('An error occurred while generating the schedule');
