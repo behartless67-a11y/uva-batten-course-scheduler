@@ -197,22 +197,17 @@ export default function ConflictResolutionWizard({
       const newFaculty = faculty.find(f => f.id === resolution.newFacultyId);
 
       // Check for parenting partner conflicts
-      if (newFaculty?.hardConstraints) {
-        const parentingPartner = newFaculty.hardConstraints.find(
-          hc => hc.type === 'parenting_partner'
-        )?.facultyId;
+      if (newFaculty?.shareParentingWith) {
+        const parentingPartnerId = newFaculty.shareParentingWith;
+        const partnerSections = sections.filter(s => s.facultyId === parentingPartnerId);
+        const conflicts = partnerSections.filter(s =>
+          s.timeSlot.days.some(day => currentSection.timeSlot.days.includes(day)) &&
+          s.timeSlot.startTime === currentSection.timeSlot.startTime
+        );
 
-        if (parentingPartner) {
-          const partnerSections = sections.filter(s => s.facultyId === parentingPartner);
-          const conflicts = partnerSections.filter(s =>
-            s.timeSlot.days.some(day => currentSection.timeSlot.days.includes(day)) &&
-            s.timeSlot.startTime === currentSection.timeSlot.startTime
-          );
-
-          if (conflicts.length > 0) {
-            const partner = faculty.find(f => f.id === parentingPartner);
-            issues.push(`⚠️ Parenting partner conflict with ${partner?.name}`);
-          }
+        if (conflicts.length > 0) {
+          const partner = faculty.find(f => f.id === parentingPartnerId);
+          issues.push(`⚠️ Parenting partner conflict with ${partner?.name}`);
         }
       }
     }
