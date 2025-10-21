@@ -86,13 +86,29 @@ export default function Home() {
       {/* Header */}
       <header className="bg-uva-navy text-white shadow-lg">
         <div className="max-w-[98vw] mx-auto px-4 py-6">
-          <div className="flex items-center gap-3">
-            <Calendar className="w-8 h-8 text-uva-orange" />
-            <div>
-              <h1 className="text-3xl font-bold font-serif">UVA Batten Course Scheduling Tool</h1>
-              <p className="text-sm text-gray-300 mt-1">
-                Automated course scheduling with constraint satisfaction
-              </p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Calendar className="w-8 h-8 text-uva-orange" />
+              <div>
+                <h1 className="text-3xl font-bold font-serif">UVA Batten Course Scheduling Tool</h1>
+                <p className="text-sm text-gray-300 mt-1">
+                  Automated course scheduling with constraint satisfaction
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <a
+                href="/faculty-submit"
+                className="px-4 py-2 bg-uva-orange hover:bg-opacity-90 text-white font-semibold rounded-lg transition-all"
+              >
+                Faculty Form
+              </a>
+              <a
+                href="/admin"
+                className="px-4 py-2 bg-white hover:bg-gray-100 text-uva-navy font-semibold rounded-lg transition-all"
+              >
+                Admin Dashboard
+              </a>
             </div>
           </div>
         </div>

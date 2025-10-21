@@ -19,7 +19,14 @@
       "Bash(git commit:*)",
       "Bash(git push)",
       "Bash(xcopy:*)",
-      "Bash(robocopy:*)"
+      "Bash(robocopy:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(gh repo view:*)",
+      "Bash(gh repo edit:*)",
+      "Bash(gh api:*)",
+      "Bash(npm install:*)",
+      "Bash(swa deploy:*)"
     ],
     "deny": [],
     "ask": []

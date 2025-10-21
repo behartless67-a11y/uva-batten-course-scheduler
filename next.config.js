@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
+  // Uncomment for static export deployment:
+  // output: 'export',
   images: {
     unoptimized: true,
   },
