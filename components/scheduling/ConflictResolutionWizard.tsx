@@ -120,6 +120,12 @@ export default function ConflictResolutionWizard({
     setSuggestions(newSuggestions);
   };
 
+  // Helper function to convert "HH:MM" to minutes since midnight
+  const timeToMinutes = (time: string): number => {
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
   const checkCascadingEffects = (
     resolution: ConflictResolution,
     currentSection: ScheduledSection
@@ -147,12 +153,13 @@ export default function ConflictResolutionWizard({
       const battenHourStart = 12 * 60 + 30; // 12:30 PM in minutes
       const battenHourEnd = 13 * 60 + 30; // 1:30 PM in minutes
       const course = courses.find(c => c.id === currentSection.courseId);
+      const newStartMinutes = timeToMinutes(newSlot.startTime);
 
       if (
         course?.type === 'Core' &&
         newSlot.days.includes('Monday' as DayOfWeek) &&
-        newSlot.startTime >= battenHourStart &&
-        newSlot.startTime < battenHourEnd
+        newStartMinutes >= battenHourStart &&
+        newStartMinutes < battenHourEnd
       ) {
         issues.push('⚠️ BATTEN HOUR VIOLATION: Core courses cannot be scheduled Monday 12:30-1:30 PM');
       }
@@ -217,13 +224,14 @@ export default function ConflictResolutionWizard({
     const battenHourStart = 12 * 60 + 30;
     const battenHourEnd = 13 * 60 + 30;
     const course = courses.find(c => c.id === section.courseId);
+    const sectionStartMinutes = timeToMinutes(section.timeSlot.startTime);
 
     if (
       conflict.type.toLowerCase().includes('batten') ||
       (course?.type === 'Core' &&
         section.timeSlot.days.includes('Monday' as DayOfWeek) &&
-        section.timeSlot.startTime >= battenHourStart &&
-        section.timeSlot.startTime < battenHourEnd)
+        sectionStartMinutes >= battenHourStart &&
+        sectionStartMinutes < battenHourEnd)
     ) {
       reasons.push('⚠️ BATTEN HOUR VIOLATION: Core courses cannot be scheduled Monday 12:30-1:30 PM');
     }
@@ -338,8 +346,10 @@ export default function ConflictResolutionWizard({
     if (timeSlot.startTime === section.timeSlot.startTime) {
       details.push('keeps same time of day');
     } else {
-      const originalHour = Math.floor(section.timeSlot.startTime / 60);
-      const newHour = Math.floor(timeSlot.startTime / 60);
+      const originalMinutes = timeToMinutes(section.timeSlot.startTime);
+      const newMinutes = timeToMinutes(timeSlot.startTime);
+      const originalHour = Math.floor(originalMinutes / 60);
+      const newHour = Math.floor(newMinutes / 60);
       if (originalHour < 12 && newHour < 12) {
         details.push('stays in morning');
       } else if (originalHour >= 12 && newHour >= 12) {
