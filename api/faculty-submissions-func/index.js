@@ -61,6 +61,8 @@ module.exports = async function (context, req) {
       const submission = {
         partitionKey: 'FacultyPreferences',
         rowKey: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+
+        // Faculty Info
         facultyName: body.facultyName,
         email: body.email,
         preferredDays: body.preferredDays || '',
@@ -68,6 +70,19 @@ module.exports = async function (context, req) {
         preferredTimeSlots: body.preferredTimeSlots || '',
         shareParentingWith: body.shareParentingWith || '',
         additionalNotes: body.additionalNotes || '',
+
+        // Course Info
+        courseCode: body.courseCode || '',
+        courseName: body.courseName || '',
+        courseType: body.courseType || '',
+        enrollmentCap: body.enrollmentCap || '',
+        numberOfSections: body.numberOfSections || '',
+        numberOfDiscussions: body.numberOfDiscussions || '',
+        duration: body.duration || '',
+        sessionsPerWeek: body.sessionsPerWeek || '',
+        targetPrograms: body.targetPrograms || '',
+        courseNotes: body.courseNotes || '',
+
         submittedAt: new Date().toISOString(),
       };
 

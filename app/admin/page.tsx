@@ -60,6 +60,7 @@ export default function AdminDashboard() {
 
     // Transform data for Excel
     const excelData = filteredSubmissions.map(sub => ({
+      // Faculty Info
       'Faculty Name': sub.facultyName,
       'Email': sub.email,
       'Preferred Days': sub.preferredDays || 'None',
@@ -67,6 +68,19 @@ export default function AdminDashboard() {
       'Preferred Time Slots': sub.preferredTimeSlots || 'None',
       'Share Parenting With': sub.shareParentingWith || 'N/A',
       'Additional Notes': sub.additionalNotes || '',
+
+      // Course Info
+      'Course Code': sub.courseCode || '',
+      'Course Name': sub.courseName || '',
+      'Type': sub.courseType || '',
+      'Enrollment Cap': sub.enrollmentCap || '',
+      'Sections': sub.numberOfSections || '',
+      'Discussions': sub.numberOfDiscussions || '',
+      'Duration (min)': sub.duration || '',
+      'Sessions/Week': sub.sessionsPerWeek || '',
+      'Target Programs': sub.targetPrograms || '',
+      'Course Notes': sub.courseNotes || '',
+
       'Submitted At': new Date(sub.submittedAt).toLocaleString(),
     }));
 
@@ -78,15 +92,25 @@ export default function AdminDashboard() {
     ws['!cols'] = [
       { wch: 25 }, // Faculty Name
       { wch: 30 }, // Email
-      { wch: 30 }, // Preferred Days
-      { wch: 30 }, // Cannot Teach Days
-      { wch: 35 }, // Preferred Time Slots
+      { wch: 25 }, // Preferred Days
+      { wch: 25 }, // Cannot Teach Days
+      { wch: 30 }, // Preferred Time Slots
       { wch: 25 }, // Share Parenting With
-      { wch: 50 }, // Additional Notes
+      { wch: 40 }, // Additional Notes
+      { wch: 15 }, // Course Code
+      { wch: 35 }, // Course Name
+      { wch: 12 }, // Type
+      { wch: 15 }, // Enrollment Cap
+      { wch: 10 }, // Sections
+      { wch: 12 }, // Discussions
+      { wch: 12 }, // Duration
+      { wch: 12 }, // Sessions/Week
+      { wch: 30 }, // Target Programs
+      { wch: 40 }, // Course Notes
       { wch: 20 }, // Submitted At
     ];
 
-    XLSX.utils.book_append_sheet(wb, ws, 'Faculty Preferences');
+    XLSX.utils.book_append_sheet(wb, ws, 'Submissions');
 
     // Download
     const timestamp = new Date().toISOString().split('T')[0];
@@ -101,11 +125,18 @@ export default function AdminDashboard() {
 
     // Transform data for CSV - formatted for scheduler upload
     const csvData = filteredSubmissions.map(sub => ({
-      'Faculty Name': sub.facultyName,
-      'Email': sub.email,
-      'Preferred Days': sub.preferredDays || '',
-      'Unavailable Days': sub.cannotTeachDays || '',
-      'Parenting Partner': sub.shareParentingWith || '',
+      // Course columns (matching your screenshot format)
+      'code': sub.courseCode || '',
+      'name': sub.courseName || '',
+      'type': sub.courseType || '',
+      'faculty': sub.facultyName,
+      'enrollmentCap': sub.enrollmentCap || '',
+      'numberOfSections': sub.numberOfSections || '',
+      'numberOfDiscussions': sub.numberOfDiscussions || '',
+      'duration': sub.duration || '',
+      'sessionsPerWeek': sub.sessionsPerWeek || '',
+      'targetPrograms': sub.targetPrograms || '',
+      'notes': sub.courseNotes || '',
     }));
 
     // Create CSV content
@@ -131,7 +162,7 @@ export default function AdminDashboard() {
 
     const timestamp = new Date().toISOString().split('T')[0];
     link.setAttribute('href', url);
-    link.setAttribute('download', `faculty-preferences-${timestamp}.csv`);
+    link.setAttribute('download', `course-data-${timestamp}.csv`);
     link.style.visibility = 'hidden';
 
     document.body.appendChild(link);
