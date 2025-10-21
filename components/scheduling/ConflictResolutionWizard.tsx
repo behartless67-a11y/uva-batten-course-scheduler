@@ -169,8 +169,11 @@ export default function ConflictResolutionWizard({
       const sameCohortSections = sections.filter(s => {
         if (s.id === currentSection.id) return false;
         const otherCourse = courses.find(c => c.id === s.courseId);
-        return currentCourse?.targetPrograms?.some(p =>
-          otherCourse?.targetPrograms?.includes(p)
+        // Check if courses share any student cohorts (same program)
+        return currentCourse?.targetStudents?.some(cohort1 =>
+          otherCourse?.targetStudents?.some(cohort2 =>
+            cohort1.program === cohort2.program
+          )
         );
       });
 
@@ -658,9 +661,9 @@ export default function ConflictResolutionWizard({
                         ⚠️ Affects {currentConflict.affectedSections.length} sections total
                       </p>
                     )}
-                    {course.targetPrograms && course.targetPrograms.length > 0 && (
+                    {course.targetStudents && course.targetStudents.length > 0 && (
                       <p className="mt-1">
-                        <strong>Student Impact:</strong> {course.targetPrograms.join(', ')} students
+                        <strong>Student Impact:</strong> {course.targetStudents.map(s => s.program).join(', ')} students
                       </p>
                     )}
                   </div>
