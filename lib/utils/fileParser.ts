@@ -255,20 +255,23 @@ function parseTargetPrograms(programsStr?: string): any[] {
 
 /**
  * Export schedule to Excel
+ * Column names match template format for consistency
  */
 export function exportScheduleToExcel(schedule: any, filename: string = 'schedule.xlsx') {
-  // Prepare data for export
+  // Prepare data for export - using template-compatible column names
   const data = schedule.sections.map((section: any) => ({
-    'Course Code': section.course?.code || '',
-    'Course Name': section.course?.name || '',
-    'Section': section.sectionNumber,
-    'Faculty': section.faculty?.name || '',
-    'Days': section.timeSlot.days.join(', '),
-    'Start Time': section.timeSlot.startTime,
-    'End Time': section.timeSlot.endTime,
-    'Room': section.room.name,
-    'Capacity': section.room.capacity,
-    'Enrollment': section.enrollmentCap,
+    'code': section.course?.code || '',
+    'name': section.course?.name || '',
+    'type': section.course?.type || '',
+    'faculty': section.faculty?.name || '',
+    'sectionNumber': section.sectionNumber,
+    'days': section.timeSlot.days.join(','),
+    'startTime': section.timeSlot.startTime,
+    'endTime': section.timeSlot.endTime,
+    'room': section.room.name,
+    'building': section.room.building || '',
+    'roomCapacity': section.room.capacity,
+    'enrollmentCap': section.enrollmentCap,
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(data);
@@ -281,13 +284,14 @@ export function exportScheduleToExcel(schedule: any, filename: string = 'schedul
 
 /**
  * Export conflicts to Excel
+ * Uses lowercase column names for consistency
  */
 export function exportConflictsToExcel(conflicts: any[], filename: string = 'conflicts.xlsx') {
   const data = conflicts.map(conflict => ({
-    'Type': conflict.type,
-    'Severity': conflict.severity,
-    'Description': conflict.description,
-    'Affected Sections': conflict.affectedSections.join(', '),
+    'type': conflict.type,
+    'severity': conflict.severity,
+    'description': conflict.description,
+    'affectedSections': conflict.affectedSections.join(','),
   }));
 
   const worksheet = XLSX.utils.json_to_sheet(data);
