@@ -202,6 +202,26 @@ export interface CourseDataUpload {
   notes?: string;
 }
 
+// Weighted Scoring Configuration for Faculty Assignment
+export interface AssignmentWeights {
+  workloadEquity: number;        // Fair distribution of courses (0-1)
+  facultyPreference: number;     // Match faculty preferences (0-1)
+  courseTypeMatch: number;       // Faculty expertise in course type (0-1)
+  historicalConsistency: number; // Keep previous assignments (0-1)
+  timeEfficiency: number;        // Minimize schedule gaps (0-1)
+  roomProximity: number;         // Minimize room changes (0-1)
+}
+
+// Default weights that prioritize equity but balance other factors
+export const DEFAULT_ASSIGNMENT_WEIGHTS: AssignmentWeights = {
+  workloadEquity: 0.35,
+  facultyPreference: 0.25,
+  courseTypeMatch: 0.15,
+  historicalConsistency: 0.10,
+  timeEfficiency: 0.10,
+  roomProximity: 0.05,
+};
+
 // Scheduler Configuration
 export interface SchedulerConfig {
   semester: Semester;
@@ -212,6 +232,7 @@ export interface SchedulerConfig {
   preferMixedElectives: boolean; // 1 undergrad + 1 grad per slot
   avoidThursdayDiscussionsAfter5pm: boolean;
   balanceWorkload: boolean; // AI-powered equitable faculty workload distribution
+  assignmentWeights?: AssignmentWeights; // Configurable factor weights for assignment algorithm
 }
 
 // API Response types

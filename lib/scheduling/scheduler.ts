@@ -151,12 +151,23 @@ export class CourseScheduler {
   }
 
   /**
-   * Select best faculty for a course based on workload balance and preferences
+   * Select best faculty for a course using multi-factor weighted scoring
+   * Balances equity with preferences, expertise, and efficiency
    * Returns the original faculty ID or a better alternative
    */
   private selectBestFaculty(course: Course, currentWorkload: Map<string, number>): string {
     const originalFaculty = this.faculty.find(f => f.id === course.facultyId);
     if (!originalFaculty) return course.facultyId;
+
+    // Get weights (use configured or defaults)
+    const weights = this.config.assignmentWeights || {
+      workloadEquity: 0.35,
+      facultyPreference: 0.25,
+      courseTypeMatch: 0.15,
+      historicalConsistency: 0.10,
+      timeEfficiency: 0.10,
+      roomProximity: 0.05,
+    };
 
     // Find all faculty who could teach this course
     const eligibleFaculty = this.faculty.filter(f => {
@@ -169,22 +180,31 @@ export class CourseScheduler {
 
     if (eligibleFaculty.length === 0) return course.facultyId;
 
-    // Score each eligible faculty member
+    // Score each eligible faculty member using weighted multi-factor scoring
     const scoredFaculty = eligibleFaculty.map(f => {
-      let score = 100;
+      const scores = {
+        workloadEquity: this.calculateWorkloadEquityScore(f.id, currentWorkload),
+        facultyPreference: this.calculateFacultyPreferenceScore(f, course),
+        courseTypeMatch: this.calculateCourseTypeMatchScore(f, course),
+        historicalConsistency: this.calculateHistoricalConsistencyScore(f.id, course),
+        timeEfficiency: this.calculateTimeEfficiencyScore(f.id, currentWorkload),
+        roomProximity: this.calculateRoomProximityScore(f.id),
+      };
 
-      // DOMINANT FACTOR: Workload balance (exponential penalty)
-      const workload = currentWorkload.get(f.id) || 0;
-      if (workload === 0) score -= 0; // Prefer unassigned
-      else if (workload === 1) score -= 20;
-      else if (workload === 2) score -= 40;
-      else if (workload === 3) score -= 65;
-      else score -= 90; // 4+ heavily discouraged
+      // Calculate weighted total score
+      const totalScore =
+        scores.workloadEquity * weights.workloadEquity +
+        scores.facultyPreference * weights.facultyPreference +
+        scores.courseTypeMatch * weights.courseTypeMatch +
+        scores.historicalConsistency * weights.historicalConsistency +
+        scores.timeEfficiency * weights.timeEfficiency +
+        scores.roomProximity * weights.roomProximity;
 
-      // BONUS: Original assignment (prefer keeping assignments from CSV if workload allows)
-      if (f.id === course.facultyId) score += 15;
-
-      return { faculty: f, score };
+      return {
+        faculty: f,
+        score: totalScore,
+        breakdown: scores, // For transparency
+      };
     });
 
     // Sort by score (highest first)
@@ -192,6 +212,77 @@ export class CourseScheduler {
 
     // Return best faculty
     return scoredFaculty[0].faculty.id;
+  }
+
+  /**
+   * Calculate workload equity score (0-100)
+   * Higher score = more equitable assignment
+   */
+  private calculateWorkloadEquityScore(facultyId: string, workload: Map<string, number>): number {
+    const currentLoad = workload.get(facultyId) || 0;
+
+    // Exponential preference for unassigned or lightly loaded faculty
+    if (currentLoad === 0) return 100; // Strongly prefer unassigned
+    if (currentLoad === 1) return 80;
+    if (currentLoad === 2) return 60;
+    if (currentLoad === 3) return 35;
+    return 10; // 4+ courses heavily discouraged
+  }
+
+  /**
+   * Calculate faculty preference score (0-100)
+   * Checks if course matches faculty's preferred teaching patterns
+   */
+  private calculateFacultyPreferenceScore(faculty: Faculty, course: Course): number {
+    // Placeholder: In production, check faculty preferences
+    // For now, check if they're the original assigned faculty
+    if (faculty.id === course.facultyId) return 100; // Original assignment
+    return 50; // Neutral if not original
+  }
+
+  /**
+   * Calculate course type match score (0-100)
+   * Matches faculty expertise to course type (Core, Elective, etc.)
+   */
+  private calculateCourseTypeMatchScore(faculty: Faculty, course: Course): number {
+    // Placeholder: In production, track faculty expertise by course type
+    // For now, give bonus to original assignment
+    if (faculty.id === course.facultyId) return 80;
+    return 50; // Neutral
+  }
+
+  /**
+   * Calculate historical consistency score (0-100)
+   * Rewards keeping assignments consistent with past semesters
+   */
+  private calculateHistoricalConsistencyScore(facultyId: string, course: Course): number {
+    // Placeholder: In production, query historical assignment database
+    // For now, prefer original CSV assignment
+    if (facultyId === course.facultyId) return 100;
+    return 50; // Neutral
+  }
+
+  /**
+   * Calculate time efficiency score (0-100)
+   * Prefers assignments that minimize schedule gaps for faculty
+   */
+  private calculateTimeEfficiencyScore(facultyId: string, workload: Map<string, number>): number {
+    // Placeholder: In production, analyze faculty's existing schedule for gaps
+    // For now, slight preference for faculty with existing courses (clustering)
+    const currentLoad = workload.get(facultyId) || 0;
+    if (currentLoad === 1 || currentLoad === 2) return 70; // Good clustering
+    if (currentLoad === 0) return 60; // Neutral
+    return 50; // Multiple courses may have gaps
+  }
+
+  /**
+   * Calculate room proximity score (0-100)
+   * Prefers assignments that minimize room changes for faculty
+   */
+  private calculateRoomProximityScore(facultyId: string): number {
+    // Placeholder: In production, track assigned rooms and calculate proximity
+    // For now, return neutral score
+    return 50;
   }
 
   /**
