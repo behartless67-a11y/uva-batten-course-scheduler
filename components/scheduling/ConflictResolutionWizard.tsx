@@ -464,20 +464,33 @@ export default function ConflictResolutionWizard({
     section: ScheduledSection,
     course: Course | undefined
   ): number => {
-    let score = 50; // Base score
+    let score = 100; // Start high, penalize heavily for workload
 
-    // Prefer faculty with matching day preferences
+    // CRITICAL: Heavily penalize faculty with existing assignments (workload balance)
+    const currentAssignments = sections.filter(s => s.facultyId === faculty.id).length;
+
+    // Exponential penalty for workload imbalance
+    // 0 courses: -0 pts, 1 course: -15 pts, 2: -30 pts, 3: -50 pts, 4+: -75+ pts
+    if (currentAssignments === 0) {
+      score -= 0; // Strongly prefer unassigned faculty
+    } else if (currentAssignments === 1) {
+      score -= 15;
+    } else if (currentAssignments === 2) {
+      score -= 30;
+    } else if (currentAssignments === 3) {
+      score -= 50;
+    } else {
+      score -= 75; // Heavily discourage 4+ courses
+    }
+
+    // Bonus for matching day preferences (secondary factor)
     const preferredDays = faculty.preferences
       .filter(p => p.preferredDays && p.preferredDays.length > 0)
       .flatMap(p => p.preferredDays || []);
     const matchingDays = section.timeSlot.days.filter(day =>
       preferredDays.includes(day)
     );
-    score += matchingDays.length * 10;
-
-    // Prefer faculty with fewer current assignments (balanced workload)
-    const currentAssignments = sections.filter(s => s.facultyId === faculty.id).length;
-    score -= currentAssignments * 5;
+    score += matchingDays.length * 5; // Reduced from 10 to make workload more important
 
     return Math.max(0, Math.min(100, score));
   };
