@@ -10,6 +10,8 @@ import { TableClient, AzureNamedKeyCredential } from '@azure/data-tables';
 export interface FacultySubmissionEntity {
   partitionKey: string; // Will be "FacultyPreferences"
   rowKey: string; // Will be unique submission ID (timestamp-based)
+
+  // Faculty Info
   facultyName: string;
   email: string;
   preferredDays?: string; // Comma-separated: "Monday,Wednesday"
@@ -17,6 +19,19 @@ export interface FacultySubmissionEntity {
   preferredTimeSlots?: string; // e.g., "Morning,Afternoon"
   shareParentingWith?: string;
   additionalNotes?: string;
+
+  // Course Info
+  courseCode?: string;
+  courseName?: string;
+  courseType?: string; // Core, Elective, Capstone
+  enrollmentCap?: string;
+  numberOfSections?: string;
+  numberOfDiscussions?: string;
+  duration?: string; // minutes
+  sessionsPerWeek?: string;
+  targetPrograms?: string; // Comma-separated
+  courseNotes?: string;
+
   submittedAt: Date;
   timestamp?: Date;
 }
