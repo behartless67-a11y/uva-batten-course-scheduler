@@ -428,6 +428,14 @@ export default function ConflictResolutionWizard({
 
     // Filter TIME_SLOTS to exclude cannot teach days
     return TIME_SLOTS.filter(slot => {
+      // **FIX: Don't suggest the current time slot**
+      const isCurrentSlot =
+        slot.startTime === section.timeSlot.startTime &&
+        slot.endTime === section.timeSlot.endTime &&
+        slot.days.length === section.timeSlot.days.length &&
+        slot.days.every(day => section.timeSlot.days.includes(day));
+      if (isCurrentSlot) return false;
+
       // Must not be on cannot teach days
       const hasConflictingDays = slot.days.some(day =>
         cannotTeachDays.includes(day)
