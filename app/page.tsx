@@ -24,6 +24,7 @@ export default function Home() {
     maxElectivesPerSlot: 2,
     preferMixedElectives: true,
     avoidThursdayDiscussionsAfter5pm: true,
+    balanceWorkload: true,
   });
 
   const handleFilesUploaded = (uploadedFaculty: Faculty[], uploadedCourses: Course[]) => {

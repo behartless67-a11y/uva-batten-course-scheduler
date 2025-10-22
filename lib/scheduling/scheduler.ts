@@ -107,30 +107,91 @@ export class CourseScheduler {
 
   /**
    * Create individual sections from course definitions
+   * Uses AI-powered workload balancing when balance workload is enabled
    */
   private createSectionsFromCourses(): Partial<ScheduledSection>[] {
     const sections: Partial<ScheduledSection>[] = [];
+    const facultyWorkload = new Map<string, number>(); // Track assignments per faculty
+
+    // Initialize workload tracker
+    this.faculty.forEach(f => facultyWorkload.set(f.id, 0));
 
     this.courses.forEach(course => {
       // Create sections for lectures
       for (let i = 0; i < course.numberOfSections; i++) {
+        let assignedFacultyId = course.facultyId;
+
+        // AI-powered workload balancing
+        if (this.config.balanceWorkload && course.facultyId) {
+          assignedFacultyId = this.selectBestFaculty(course, facultyWorkload);
+        }
+
         sections.push({
           id: `${course.id}-section-${i + 1}`,
           courseId: course.id,
           sectionNumber: i + 1,
-          facultyId: course.facultyId,
+          facultyId: assignedFacultyId,
           enrollmentCap: Math.ceil(course.enrollmentCap / course.numberOfSections),
           actualEnrollment: course.actualEnrollment
             ? Math.ceil(course.actualEnrollment / course.numberOfSections)
             : undefined,
           conflicts: [],
         });
+
+        // Update workload tracker
+        if (assignedFacultyId) {
+          facultyWorkload.set(assignedFacultyId, (facultyWorkload.get(assignedFacultyId) || 0) + 1);
+        }
       }
 
       // TODO: Discussion sections can be added here if needed
     });
 
     return sections;
+  }
+
+  /**
+   * Select best faculty for a course based on workload balance and preferences
+   * Returns the original faculty ID or a better alternative
+   */
+  private selectBestFaculty(course: Course, currentWorkload: Map<string, number>): string {
+    const originalFaculty = this.faculty.find(f => f.id === course.facultyId);
+    if (!originalFaculty) return course.facultyId;
+
+    // Find all faculty who could teach this course
+    const eligibleFaculty = this.faculty.filter(f => {
+      // Must have capacity (don't overload)
+      const workload = currentWorkload.get(f.id) || 0;
+      if (workload >= 4) return false; // Hard cap at 4 courses
+
+      return true;
+    });
+
+    if (eligibleFaculty.length === 0) return course.facultyId;
+
+    // Score each eligible faculty member
+    const scoredFaculty = eligibleFaculty.map(f => {
+      let score = 100;
+
+      // DOMINANT FACTOR: Workload balance (exponential penalty)
+      const workload = currentWorkload.get(f.id) || 0;
+      if (workload === 0) score -= 0; // Prefer unassigned
+      else if (workload === 1) score -= 20;
+      else if (workload === 2) score -= 40;
+      else if (workload === 3) score -= 65;
+      else score -= 90; // 4+ heavily discouraged
+
+      // BONUS: Original assignment (prefer keeping assignments from CSV if workload allows)
+      if (f.id === course.facultyId) score += 15;
+
+      return { faculty: f, score };
+    });
+
+    // Sort by score (highest first)
+    scoredFaculty.sort((a, b) => b.score - a.score);
+
+    // Return best faculty
+    return scoredFaculty[0].faculty.id;
   }
 
   /**

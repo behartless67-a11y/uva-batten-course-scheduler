@@ -211,6 +211,7 @@ export interface SchedulerConfig {
   maxElectivesPerSlot: number;
   preferMixedElectives: boolean; // 1 undergrad + 1 grad per slot
   avoidThursdayDiscussionsAfter5pm: boolean;
+  balanceWorkload: boolean; // AI-powered equitable faculty workload distribution
 }
 
 // API Response types
