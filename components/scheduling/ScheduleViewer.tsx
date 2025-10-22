@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Schedule, Course, Faculty, DayOfWeek, ScheduledSection, TimeSlot } from '@/types/scheduling';
-import { Download, Grid, List, Search, Wand2 } from 'lucide-react';
+import { Download, Grid, List, Search, Wand2, ChevronDown, ChevronUp, User } from 'lucide-react';
 import { exportScheduleToExcel, exportConflictsToExcel } from '@/lib/utils/fileParser';
 import { formatTimeRange12Hour } from '@/lib/utils/timeFormat';
 import ConflictResolutionWizard, { ConflictResolution } from './ConflictResolutionWizard';
@@ -24,6 +24,7 @@ export default function ScheduleViewer({ schedule, courses, faculty }: ScheduleV
   const [dragOverSection, setDragOverSection] = useState<string | null>(null);
   const [dragOverTimeSlot, setDragOverTimeSlot] = useState<{day: DayOfWeek, timeSlot: string} | null>(null);
   const [showWizard, setShowWizard] = useState(false);
+  const [showFacultySummary, setShowFacultySummary] = useState(true);
 
   const courseMap = new Map(courses.map(c => [c.id, c]));
   const facultyMap = new Map(faculty.map(f => [f.id, f]));
@@ -415,6 +416,114 @@ export default function ScheduleViewer({ schedule, courses, faculty }: ScheduleV
             dragOverSection={dragOverSection}
           />
         )}
+
+        {/* Faculty Schedule Summary */}
+        <div className="mt-6 bg-white rounded-lg border-2 border-gray-200">
+          <button
+            onClick={() => setShowFacultySummary(!showFacultySummary)}
+            className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <User className="w-5 h-5 text-uva-navy" />
+              <h3 className="text-lg font-bold text-uva-navy">Faculty Schedule Summary</h3>
+              <span className="text-sm text-gray-500">({faculty.length} faculty members)</span>
+            </div>
+            {showFacultySummary ? (
+              <ChevronUp className="w-5 h-5 text-gray-500" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-gray-500" />
+            )}
+          </button>
+
+          {showFacultySummary && (
+            <div className="px-6 pb-6">
+              {faculty
+                .slice()
+                .sort((a, b) => {
+                  // Sort by last name, then first name
+                  const aLast = a.name.split(' ').pop() || '';
+                  const bLast = b.name.split(' ').pop() || '';
+                  const lastCompare = aLast.localeCompare(bLast);
+                  if (lastCompare !== 0) return lastCompare;
+                  return a.name.localeCompare(b.name);
+                })
+                .map(facultyMember => {
+                  const facultySections = localSchedule.sections.filter(
+                    s => s.facultyId === facultyMember.id
+                  );
+
+                  // Calculate total teaching hours per week
+                  const totalHours = facultySections.reduce((sum, section) => {
+                    // Calculate duration from start and end time
+                    const [startHour, startMin] = section.timeSlot.startTime.split(':').map(Number);
+                    const [endHour, endMin] = section.timeSlot.endTime.split(':').map(Number);
+                    const durationMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+                    const sessionsPerWeek = section.timeSlot.days.length;
+                    return sum + (durationMinutes / 60) * sessionsPerWeek;
+                  }, 0);
+
+                  // Format name as Last, First
+                  const nameParts = facultyMember.name.split(' ');
+                  const formattedName =
+                    nameParts.length > 1
+                      ? `${nameParts[nameParts.length - 1]}, ${nameParts.slice(0, -1).join(' ')}`
+                      : facultyMember.name;
+
+                  return (
+                    <div
+                      key={facultyMember.id}
+                      className="border-t border-gray-200 py-4 first:border-t-0"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h4 className="font-bold text-gray-900">{formattedName}</h4>
+                          <p className="text-sm text-gray-600">
+                            {facultySections.length} {facultySections.length === 1 ? 'course' : 'courses'} •{' '}
+                            {totalHours.toFixed(1)} hours/week
+                          </p>
+                        </div>
+                      </div>
+
+                      {facultySections.length > 0 ? (
+                        <div className="space-y-2">
+                          {facultySections.map(section => {
+                            const course = courseMap.get(section.courseId);
+                            return (
+                              <div
+                                key={section.id}
+                                className="flex items-center justify-between bg-gray-50 rounded px-3 py-2 text-sm"
+                              >
+                                <div className="flex-1">
+                                  <span className="font-medium text-gray-900">
+                                    {course?.code} - {course?.name}
+                                  </span>
+                                  {section.sectionNumber > 1 && (
+                                    <span className="text-gray-500 ml-1">(Section {section.sectionNumber})</span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-4 text-gray-600">
+                                  <span>{section.timeSlot.days.join('/')}</span>
+                                  <span>
+                                    {formatTimeRange12Hour(
+                                      section.timeSlot.startTime,
+                                      section.timeSlot.endTime
+                                    )}
+                                  </span>
+                                  <span className="text-gray-500">{section.room.name}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500 italic">No courses assigned</p>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Conflict Resolution Wizard */}
