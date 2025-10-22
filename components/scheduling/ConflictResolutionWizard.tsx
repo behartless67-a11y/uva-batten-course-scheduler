@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { AlertTriangle, CheckCircle, XCircle, Lightbulb, ChevronRight } from 'lucide-react';
+import { AlertTriangle, CheckCircle, XCircle, Lightbulb, ChevronRight, Wand2, Eye } from 'lucide-react';
 import { Conflict, ScheduledSection, Faculty, Course, TimeSlot, DayOfWeek } from '@/types/scheduling';
 import { formatTimeRange12Hour } from '@/lib/utils/timeFormat';
 import { TIME_SLOTS } from '@/lib/scheduling/timeSlots';
@@ -29,6 +29,14 @@ interface ConflictSuggestion {
   score: number; // 0-100, higher is better
 }
 
+interface AutoResolutionPlan {
+  conflict: Conflict;
+  suggestion: ConflictSuggestion;
+  section: ScheduledSection;
+  course: Course;
+  faculty: Faculty | undefined;
+}
+
 export default function ConflictResolutionWizard({
   conflicts,
   sections,
@@ -40,6 +48,8 @@ export default function ConflictResolutionWizard({
   const [currentConflictIndex, setCurrentConflictIndex] = useState(0);
   const [suggestions, setSuggestions] = useState<ConflictSuggestion[]>([]);
   const [resolvedConflicts, setResolvedConflicts] = useState<Set<string>>(new Set());
+  const [showAutoResolvePreview, setShowAutoResolvePreview] = useState(false);
+  const [autoResolutionPlan, setAutoResolutionPlan] = useState<AutoResolutionPlan[]>([]);
 
   const currentConflict = conflicts[currentConflictIndex];
   const progress = ((currentConflictIndex + 1) / conflicts.length) * 100;
@@ -242,6 +252,78 @@ export default function ConflictResolutionWizard({
     }
   };
 
+  const generateAutoResolutionPlan = () => {
+    const plan: AutoResolutionPlan[] = [];
+
+    conflicts.forEach(conflict => {
+      const sectionId = conflict.affectedSections[0];
+      if (!sectionId) return;
+
+      const section = sections.find(s => s.id === sectionId);
+      if (!section) return;
+
+      const course = courses.find(c => c.id === section.courseId);
+      const facultyMember = faculty.find(f => f.id === section.facultyId);
+
+      // Generate suggestions for this conflict
+      const conflictSuggestions: ConflictSuggestion[] = [];
+
+      // Find alternative faculty
+      const availableFaculty = findAvailableFaculty(section, conflict);
+      availableFaculty.slice(0, 3).forEach(f => {
+        conflictSuggestions.push({
+          description: `Reassign to ${f.name}`,
+          resolution: {
+            type: 'reassign_faculty',
+            sectionId: section.id,
+            newFacultyId: f.id,
+          },
+          score: calculateFacultyScore(f, section, course),
+        });
+      });
+
+      // Find alternative time slots
+      const availableTimeSlots = findAvailableTimeSlots(section);
+      availableTimeSlots.slice(0, 3).forEach(timeSlot => {
+        conflictSuggestions.push({
+          description: `Reschedule to ${timeSlot.days.join('/')} ${formatTimeRange12Hour(timeSlot.startTime, timeSlot.endTime)}`,
+          resolution: {
+            type: 'reschedule_section',
+            sectionId: section.id,
+            newTimeSlot: timeSlot,
+          },
+          score: calculateTimeSlotScore(timeSlot, section, facultyMember),
+        });
+      });
+
+      // Pick the best suggestion
+      conflictSuggestions.sort((a, b) => b.score - a.score);
+      const bestSuggestion = conflictSuggestions[0];
+
+      if (bestSuggestion && course) {
+        plan.push({
+          conflict,
+          suggestion: bestSuggestion,
+          section,
+          course,
+          faculty: facultyMember,
+        });
+      }
+    });
+
+    setAutoResolutionPlan(plan);
+    setShowAutoResolvePreview(true);
+  };
+
+  const handleApplyAutoResolution = () => {
+    autoResolutionPlan.forEach(item => {
+      onResolveConflict(item.conflict.id, item.suggestion.resolution);
+      setResolvedConflicts(prev => new Set([...prev, item.conflict.id]));
+    });
+    setShowAutoResolvePreview(false);
+    onClose();
+  };
+
   if (!currentConflict) return null;
 
   const section = sections.find(s => s.id === currentConflict.affectedSections[0]);
@@ -271,36 +353,145 @@ export default function ConflictResolutionWizard({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="bg-uva-navy text-white p-6 sticky top-0">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h2 className="text-2xl font-bold">Conflict Resolution Wizard</h2>
-              <p className="text-gray-300 text-sm mt-1">
-                Resolving conflict {currentConflictIndex + 1} of {conflicts.length}
-              </p>
+    <>
+      {/* Auto-Resolve Preview Modal */}
+      {showAutoResolvePreview && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-gradient-to-r from-purple-600 to-purple-800 text-white p-6">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <h2 className="text-2xl font-bold flex items-center gap-2">
+                    <Wand2 className="w-6 h-6" />
+                    AI Auto-Resolution Plan
+                  </h2>
+                  <p className="text-purple-100 text-sm mt-1">
+                    Review the proposed changes before applying
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowAutoResolvePreview(false)}
+                  className="text-purple-200 hover:text-white transition-colors"
+                >
+                  <XCircle className="w-6 h-6" />
+                </button>
+              </div>
             </div>
-            <button
-              onClick={onClose}
-              className="text-gray-300 hover:text-white transition-colors"
-            >
-              <XCircle className="w-6 h-6" />
-            </button>
-          </div>
 
-          {/* Progress Bar */}
-          <div className="w-full bg-uva-blue-light rounded-full h-2">
-            <div
-              className="bg-uva-orange h-2 rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
+            <div className="p-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-blue-900">
+                  <strong>Found {autoResolutionPlan.length} conflicts</strong> with automatic solutions.
+                  The AI has selected the best resolution for each conflict based on faculty preferences,
+                  availability, and schedule optimization.
+                </p>
+              </div>
+
+              <div className="space-y-4 mb-6">
+                {autoResolutionPlan.map((item, idx) => (
+                  <div
+                    key={item.conflict.id}
+                    className="border-2 border-gray-200 rounded-lg p-4 hover:border-purple-300 transition-colors"
+                  >
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="bg-purple-100 text-purple-700 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
+                        {idx + 1}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-900 mb-1">
+                          {item.course.code} - {item.course.name}
+                        </h4>
+                        <p className="text-sm text-red-600 mb-2">
+                          <AlertTriangle className="w-3 h-3 inline mr-1" />
+                          {item.conflict.description}
+                        </p>
+                      </div>
+                      <div className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded font-semibold">
+                        Score: {item.suggestion.score}/100
+                      </div>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-3 ml-11">
+                      <div className="flex items-center gap-2 text-sm text-gray-700 mb-2">
+                        <span className="font-medium">Current:</span>
+                        <span>{item.faculty?.name}</span>
+                        <span className="text-gray-400">•</span>
+                        <span>
+                          {item.section.timeSlot.days.join('/')}{' '}
+                          {formatTimeRange12Hour(item.section.timeSlot.startTime, item.section.timeSlot.endTime)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <ChevronRight className="w-4 h-4 text-purple-600" />
+                        <span className="font-medium text-purple-700">Proposed:</span>
+                        <span className="text-gray-900">{item.suggestion.description}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-3 pt-6 border-t border-gray-200">
+                <button
+                  onClick={() => setShowAutoResolvePreview(false)}
+                  className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleApplyAutoResolution}
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all font-medium shadow-lg flex items-center justify-center gap-2"
+                >
+                  <CheckCircle className="w-5 h-5" />
+                  Apply All Changes ({autoResolutionPlan.length})
+                </button>
+              </div>
+            </div>
           </div>
-          <p className="text-xs text-gray-300 mt-1">
-            {resolvedConflicts.size} resolved, {conflicts.length - resolvedConflicts.size} remaining
-          </p>
         </div>
+      )}
+
+      {/* Main Wizard */}
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="bg-uva-navy text-white p-6 sticky top-0">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h2 className="text-2xl font-bold">Conflict Resolution Wizard</h2>
+                <p className="text-gray-300 text-sm mt-1">
+                  Resolving conflict {currentConflictIndex + 1} of {conflicts.length}
+                </p>
+              </div>
+              <button
+                onClick={onClose}
+                className="text-gray-300 hover:text-white transition-colors"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Auto-Resolve Button */}
+            <button
+              onClick={generateAutoResolutionPlan}
+              className="w-full mb-4 px-4 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all shadow-lg flex items-center justify-center gap-2 font-medium"
+            >
+              <Wand2 className="w-5 h-5" />
+              AI Auto-Resolve All Conflicts
+              <Eye className="w-4 h-4 ml-1 opacity-75" />
+            </button>
+
+            {/* Progress Bar */}
+            <div className="w-full bg-uva-blue-light rounded-full h-2">
+              <div
+                className="bg-uva-orange h-2 rounded-full transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <p className="text-xs text-gray-300 mt-1">
+              {resolvedConflicts.size} resolved, {conflicts.length - resolvedConflicts.size} remaining
+            </p>
+          </div>
 
         {/* Conflict Details */}
         <div className="p-6">
@@ -393,7 +584,8 @@ export default function ConflictResolutionWizard({
             </button>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
