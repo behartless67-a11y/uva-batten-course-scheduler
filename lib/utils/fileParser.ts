@@ -367,6 +367,10 @@ function parseDays(daysStr: string): DayOfWeek[] {
 
 /**
  * Parse target programs from comma-separated string
+ * Handles formats like:
+ * - "MPP Year 1" or "MPP_Postgrad Year 1"
+ * - "BA Year 2"
+ * - "Minor" or "Cert"
  */
 function parseTargetPrograms(programsStr?: string): any[] {
   if (!programsStr) return [
@@ -381,23 +385,50 @@ function parseTargetPrograms(programsStr?: string): any[] {
   const programs = programsStr.split(',').map(p => p.trim());
 
   const parsed = programs.map(program => {
-    // Example: "MPP Year 1" or "BA Year 3"
-    const match = program.match(/(MPP|BA|Minor|Cert)\s*Year\s*(\d)/i);
+    // Example: "MPP Year 1", "MPP_Postgrad Year 1", "BA Year 3"
+    const matchWithYear = program.match(/(MPP[_\s]*(?:Postgrad|Accel)?|BA|Minor|Cert)\s*Year\s*(\d)/i);
 
-    if (match) {
+    if (matchWithYear) {
+      let programType = matchWithYear[1].toUpperCase().replace(/\s+/g, '_');
+
+      // Normalize MPP variants
+      if (programType === 'MPP' || programType.startsWith('MPP_')) {
+        // Default to MPP_Postgrad if just "MPP"
+        if (programType === 'MPP') {
+          programType = 'MPP_Postgrad';
+        } else if (programType === 'MPP_POSTGRAD') {
+          programType = 'MPP_Postgrad';
+        } else if (programType === 'MPP_ACCEL') {
+          programType = 'MPP_Accel';
+        }
+      }
+
       return {
-        year: parseInt(match[2]) as 1 | 2 | 3 | 4,
-        program: match[1].toUpperCase() as any,
-        count: 0, // Will be calculated elsewhere
+        year: parseInt(matchWithYear[2]) as 1 | 2 | 3 | 4,
+        program: programType as any,
+        count: 0,
       };
     }
 
-    // Try to parse just the program name
-    const programOnly = program.match(/(MPP|BA|Minor|Cert)/i);
+    // Try to parse just the program name without year
+    const programOnly = program.match(/(MPP[_\s]*(?:Postgrad|Accel)?|BA|Minor|Cert)/i);
     if (programOnly) {
+      let programType = programOnly[1].toUpperCase().replace(/\s+/g, '_');
+
+      // Normalize MPP variants
+      if (programType === 'MPP' || programType.startsWith('MPP_')) {
+        if (programType === 'MPP') {
+          programType = 'MPP_Postgrad';
+        } else if (programType === 'MPP_POSTGRAD') {
+          programType = 'MPP_Postgrad';
+        } else if (programType === 'MPP_ACCEL') {
+          programType = 'MPP_Accel';
+        }
+      }
+
       return {
         year: 1 as 1 | 2 | 3 | 4,
-        program: programOnly[1].toUpperCase() as any,
+        program: programType as any,
         count: 0,
       };
     }

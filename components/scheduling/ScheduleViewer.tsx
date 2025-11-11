@@ -14,12 +14,15 @@ import { TIME_SLOTS } from '@/lib/scheduling/timeSlots';
  */
 function getCohortColors(course: Course | undefined): { bg: string; border: string; text: string } {
   if (!course || !course.targetStudents || course.targetStudents.length === 0) {
+    console.log(`No cohort data for course: ${course?.code || 'unknown'}`);
     return { bg: 'bg-gray-50', border: 'border-gray-300', text: 'text-gray-900' };
   }
 
   // Use the primary (first) target cohort for color coding
   const primaryCohort = course.targetStudents[0];
   const cohortKey = `${primaryCohort.program}-${primaryCohort.year}`;
+
+  console.log(`Course ${course.code}: cohortKey = "${cohortKey}", program = "${primaryCohort.program}", year = ${primaryCohort.year}`);
 
   const colorMap: Record<string, { bg: string; border: string; text: string }> = {
     // MPP Year 1 - Blue shades
@@ -55,7 +58,13 @@ function getCohortColors(course: Course | undefined): { bg: string; border: stri
     'Cert-4': { bg: 'bg-amber-100', border: 'border-amber-400', text: 'text-amber-900' },
   };
 
-  return colorMap[cohortKey] || { bg: 'bg-gray-50', border: 'border-gray-300', text: 'text-gray-900' };
+  const colors = colorMap[cohortKey] || { bg: 'bg-gray-50', border: 'border-gray-300', text: 'text-gray-900' };
+
+  if (!colorMap[cohortKey]) {
+    console.warn(`No color mapping found for cohortKey: "${cohortKey}"`);
+  }
+
+  return colors;
 }
 
 /**
