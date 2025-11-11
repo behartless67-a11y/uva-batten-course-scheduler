@@ -57,6 +57,9 @@ export function detectConflicts(
   // 13. Multi-section course clustering (e.g., LPPP 7750 sections should be distributed)
   conflicts.push(...detectSectionClustering(sections, courses));
 
+  // 14. LPPA 7110/7160 discussion overlap with LPPL 6050
+  conflicts.push(...detectDiscussionOverlapWithLPPL6050(sections, courses));
+
   return conflicts;
 }
 
@@ -593,6 +596,58 @@ function detectSectionClustering(
         });
       }
     }
+  });
+
+  return conflicts;
+}
+
+/**
+ * Detect when LPPA 7110 or LPPA 7160 discussions overlap with LPPL 6050 lectures or discussions
+ * These should be minimized to avoid conflicts for students
+ */
+function detectDiscussionOverlapWithLPPL6050(
+  sections: ScheduledSection[],
+  courses: Course[]
+): Conflict[] {
+  const conflicts: Conflict[] = [];
+
+  // Find LPPL 6050 sections (both lectures and discussions)
+  const lppl6050Sections = sections.filter(s => {
+    const course = courses.find(c => c.id === s.courseId);
+    return course?.code === 'LPPL 6050';
+  });
+
+  if (lppl6050Sections.length === 0) {
+    return conflicts; // LPPL 6050 not scheduled
+  }
+
+  // Find LPPA 7110 and 7160 discussion sections
+  const targetDiscussions = sections.filter(s => {
+    const course = courses.find(c => c.id === s.courseId);
+    return (course?.code === 'LPPA 7110' || course?.code === 'LPPA 7160') &&
+           s.sectionNumber > (course?.numberOfSections || 1); // Discussion sections come after lecture sections
+  });
+
+  // Check for overlaps
+  targetDiscussions.forEach(discussion => {
+    const discussionCourse = courses.find(c => c.id === discussion.courseId);
+
+    lppl6050Sections.forEach(lppl6050Section => {
+      if (doTimeSlotsOverlap(discussion.timeSlot, lppl6050Section.timeSlot)) {
+        const lppl6050Course = courses.find(c => c.id === lppl6050Section.courseId);
+        const isLecture = lppl6050Section.sectionNumber <= (lppl6050Course?.numberOfSections || 1);
+        const sectionType = isLecture ? 'lecture' : 'discussion';
+
+        conflicts.push({
+          id: `lppa-lppl-overlap-${discussion.id}-${lppl6050Section.id}`,
+          type: ConflictType.SOFT_PREFERENCE_VIOLATED,
+          severity: 'warning',
+          description: `${discussionCourse?.code} discussion overlaps with LPPL 6050 ${sectionType}. This should be minimized to avoid student conflicts.`,
+          affectedSections: [discussion.id, lppl6050Section.id],
+          affectedCourses: [discussion.courseId, lppl6050Section.courseId],
+        });
+      }
+    });
   });
 
   return conflicts;

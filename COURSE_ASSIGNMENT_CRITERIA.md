@@ -296,17 +296,46 @@ These constraints should be satisfied when possible, but can be relaxed if neces
 
 ---
 
-### 6. Discussion Sections Same Day as Lecture
+### 6. Course-Specific Discussion Scheduling Constraints
 
-**Rule:** For courses with discussion sections, prefer scheduling discussions on the same day as the lecture
+**Overview:** Different courses have specific requirements for discussion section scheduling
 
-**Applies To:** Courses like LPPA 6050 (Leadership in the Public Arena)
+**Special Constraints:**
 
-**Source Data:** Course `notes` field may specify this preference
+**LPPL 6050 (Leadership in the Public Arena)**
+- **Rule:** All discussion sections must be scheduled on Tuesday OR Thursday only
+- **Duration:** 75 minutes (not the standard 50 minutes)
+- **Rationale:** Maintains consistency with course pedagogy and allows lecture/discussion integration
 
-**Rationale:** Helps with material retention and student convenience
+**LPPL 2100**
+- **Rule:** All discussion sections must be scheduled on Thursday only
+- **Duration:** 75 minutes (not the standard 50 minutes)
+- **Rationale:** Concentrates all discussions on one day for optimal coordination
 
-**Flexibility:** Can be relaxed if room availability doesn't permit
+**Default Discussion Duration:** 50 minutes (unless course-specific override exists)
+
+**Implementation:**
+- Course type has `discussionDuration` field (defaults to 50)
+- Course type has `discussionDaysConstraint` field with values:
+  - `'tuesday-thursday'` for LPPL 6050
+  - `'thursday-only'` for LPPL 2100
+  - `'same-as-lecture'` for courses wanting discussions on lecture day
+
+---
+
+### 7. Minimize LPPA 7110/7160 Discussion Overlap with LPPL 6050
+
+**Rule:** Discussion sections for LPPA 7110 and LPPA 7160 should minimize overlap with LPPL 6050 lectures and discussions
+
+**Rationale:** Students may be taking LPPL 6050 concurrently with LPPA courses, so avoiding conflicts maximizes scheduling flexibility
+
+**Severity:** Warning (soft constraint)
+
+**Implementation:** `detectDiscussionOverlapWithLPPL6050()` in conflict detection
+
+**Example:**
+- ❌ **Avoid:** LPPA 7110 discussion at 2:00-3:15 PM, LPPL 6050 lecture at 2:00-3:15 PM
+- ✅ **Prefer:** LPPA 7110 discussion at 11:00 AM, LPPL 6050 lecture at 2:00 PM
 
 ---
 

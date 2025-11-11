@@ -109,8 +109,10 @@ export interface Course {
   requiresLargeLectureHall?: boolean;
   requiresSmallRoom?: boolean;
   preferredRoom?: RoomType;
-  duration: number; // In minutes
+  duration: number; // In minutes (lecture duration)
+  discussionDuration?: number; // In minutes (discussion section duration, defaults to 50)
   sessionsPerWeek: number; // 1, 2, or 3
+  discussionDaysConstraint?: 'tuesday-thursday' | 'thursday-only' | 'same-as-lecture'; // Special constraints for discussion scheduling
 
   // Targeting
   targetStudents: StudentCohort[];

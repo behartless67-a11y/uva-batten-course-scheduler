@@ -199,6 +199,18 @@ export function parseCombinedData(file: File): Promise<{ faculty: Faculty[], cou
 
           const facultyMember = facultyMap.get(facultyName);
 
+          // Special discussion constraints based on course code
+          let discussionDuration: number | undefined;
+          let discussionDaysConstraint: 'tuesday-thursday' | 'thursday-only' | 'same-as-lecture' | undefined;
+
+          if (code === 'LPPL 6050') {
+            discussionDuration = 75;
+            discussionDaysConstraint = 'tuesday-thursday';
+          } else if (code === 'LPPL 2100') {
+            discussionDuration = 75;
+            discussionDaysConstraint = 'thursday-only';
+          }
+
           courses.push({
             id: `course-${index + 1}`,
             code: code,
@@ -210,7 +222,9 @@ export function parseCombinedData(file: File): Promise<{ faculty: Faculty[], cou
             numberOfSections: parseInt(numberOfSections) || 1,
             numberOfDiscussions: numberOfDiscussions ? parseInt(numberOfDiscussions) : undefined,
             duration: parseInt(duration) || 50,
+            discussionDuration,
             sessionsPerWeek: parseInt(sessionsPerWeek) || 2,
+            discussionDaysConstraint,
             targetStudents: parseTargetPrograms(targetPrograms),
             preferredRoom,
             notes: notes,
@@ -280,6 +294,18 @@ export function parseCourseData(file: File, faculty: Faculty[]): Promise<Course[
             preferredRoom = RoomType.PAVILION_VIII;
           }
 
+          // Special discussion constraints based on course code
+          let discussionDuration: number | undefined;
+          let discussionDaysConstraint: 'tuesday-thursday' | 'thursday-only' | 'same-as-lecture' | undefined;
+
+          if (row.code === 'LPPL 6050') {
+            discussionDuration = 75;
+            discussionDaysConstraint = 'tuesday-thursday';
+          } else if (row.code === 'LPPL 2100') {
+            discussionDuration = 75;
+            discussionDaysConstraint = 'thursday-only';
+          }
+
           return {
             id: `course-${index + 1}`,
             code: row.code,
@@ -291,7 +317,9 @@ export function parseCourseData(file: File, faculty: Faculty[]): Promise<Course[
             numberOfSections: row.numberOfSections || 1,
             numberOfDiscussions: row.numberOfDiscussions,
             duration: row.duration,
+            discussionDuration,
             sessionsPerWeek: row.sessionsPerWeek,
+            discussionDaysConstraint,
             targetStudents: parseTargetPrograms(row.targetPrograms),
             preferredRoom,
             notes: row.notes,
