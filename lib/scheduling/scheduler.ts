@@ -407,7 +407,67 @@ export class CourseScheduler {
       slots = this.rankSlotsByPreference(slots, facultyMember);
     }
 
+    // Anti-clustering: De-prioritize time slots that already have sections of this course
+    // This helps spread sections across different times for student flexibility
+    slots = this.rankSlotsByDistribution(slots, course);
+
     return slots;
+  }
+
+  /**
+   * Rank time slots to avoid clustering sections of the same course
+   * Prioritizes time slots that don't already have this course scheduled
+   */
+  private rankSlotsByDistribution(slots: TimeSlot[], course: Course): TimeSlot[] {
+    // Get existing sections of this course
+    const existingSections = this.sections.filter(s => s.courseId === course.id);
+
+    if (existingSections.length === 0) {
+      return slots; // No existing sections, no need to adjust
+    }
+
+    // Count how many days are already used by this course
+    const usedDays = new Set<string>();
+    existingSections.forEach(section => {
+      section.timeSlot.days.forEach(day => usedDays.add(day));
+    });
+
+    // Map each slot to a score (higher = better distribution)
+    const slotsWithScores = slots.map(slot => {
+      let score = 100; // Base score
+
+      // Check if any existing section of this course is at this exact time
+      const hasExactMatch = existingSections.some(existing => {
+        const sameTime = existing.timeSlot.startTime === slot.startTime;
+        const sameDays = existing.timeSlot.days.some(day => slot.days.includes(day));
+        return sameTime && sameDays;
+      });
+
+      if (hasExactMatch) {
+        score -= 50; // Heavily penalize exact same time slot
+      }
+
+      // Check if this slot uses a day that's already in use
+      const usesExistingDay = slot.days.some(day => usedDays.has(day));
+      if (usesExistingDay) {
+        score -= 20; // Moderate penalty for using same day
+      }
+
+      // Special case for LPPP 7750: strongly encourage spreading across multiple days
+      if (course.code === 'LPPP 7750') {
+        // If we have 4+ sections, give extra bonus for new days
+        if (existingSections.length >= 3 && !usesExistingDay) {
+          score += 30; // Bonus for using a completely new day
+        }
+      }
+
+      return { slot, score };
+    });
+
+    // Sort by score (highest first)
+    slotsWithScores.sort((a, b) => b.score - a.score);
+
+    return slotsWithScores.map(s => s.slot);
   }
 
   /**

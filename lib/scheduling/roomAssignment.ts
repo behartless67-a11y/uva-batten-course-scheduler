@@ -5,10 +5,10 @@ import { isBlockBusting } from '@/lib/utils/blockBusting';
 export const ROOMS: Room[] = [
   // Standard Batten School rooms
   {
-    id: 'dell',
-    name: 'Dell',
-    type: RoomType.DELL,
-    capacity: ROOM_CAPACITIES[RoomType.DELL],
+    id: 'monroe-120',
+    name: 'Monroe 120',
+    type: RoomType.MONROE_120,
+    capacity: ROOM_CAPACITIES[RoomType.MONROE_120],
   },
   {
     id: 'rouss',
@@ -30,10 +30,10 @@ export const ROOMS: Room[] = [
     capacity: ROOM_CAPACITIES[RoomType.ROUSS_403],
   },
   {
-    id: 'monroe-120',
-    name: 'Monroe 120',
-    type: RoomType.MONROE_120,
-    capacity: ROOM_CAPACITIES[RoomType.MONROE_120],
+    id: 'monroe-120-blockbust',
+    name: 'Monroe 120 (Block-Bust)',
+    type: RoomType.MONROE_120_BLOCKBUST,
+    capacity: ROOM_CAPACITIES[RoomType.MONROE_120_BLOCKBUST],
   },
   {
     id: 'pavilion-viii-blockbust',
@@ -64,7 +64,7 @@ export const ROOMS: Room[] = [
 
 /**
  * Assigns a room to a course section based on priority rules:
- * 1. Dell (60 capacity) - for large lectures
+ * 1. Monroe 120 (60 capacity) - for large lectures
  * 2. Rouss Hall (48 capacity) - for medium courses
  * 3. Pavilion VIII (18 capacity) - for small electives and capstones
  * 4. UREG Assigned - for everything else
@@ -78,16 +78,16 @@ export function assignRoom(course: Course, enrollmentCap: number): Room {
     }
   }
 
-  // Priority 2: Core courses need Dell or Rouss
+  // Priority 2: Core courses need Monroe 120 or Rouss
   if (course.type === CourseType.CORE) {
     // If only one section, must use large lecture hall
     if (course.numberOfSections === 1) {
-      return ROOMS.find(r => r.type === RoomType.DELL)!;
+      return ROOMS.find(r => r.type === RoomType.MONROE_120)!;
     }
 
-    // Multiple sections - prefer Dell then Rouss
+    // Multiple sections - prefer Monroe 120 then Rouss
     if (enrollmentCap > 48) {
-      return ROOMS.find(r => r.type === RoomType.DELL)!;
+      return ROOMS.find(r => r.type === RoomType.MONROE_120)!;
     } else {
       return ROOMS.find(r => r.type === RoomType.ROUSS)!;
     }
@@ -112,7 +112,7 @@ export function assignRoom(course: Course, enrollmentCap: number): Room {
 
   // Priority 6: Large electives
   if (course.type === CourseType.ELECTIVE && enrollmentCap <= 60) {
-    return ROOMS.find(r => r.type === RoomType.DELL)!;
+    return ROOMS.find(r => r.type === RoomType.MONROE_120)!;
   }
 
   // Default: UREG assigned (leave blank for registrar to assign)
@@ -170,7 +170,7 @@ export function suggestBestRoom(
  *
  * Block-busting classes (outside standard university scheduling blocks) MUST use:
  * - Rouss 403 (48 capacity)
- * - Monroe 120 (60 capacity)
+ * - Monroe 120 Block-Bust (60 capacity)
  * - Pavilion VIII Block-Bust (18 capacity)
  *
  * @param course The course to assign
@@ -191,7 +191,7 @@ export function assignRoomWithBlockBusting(
     // Priority: smallest room that fits
     const blockBustingRooms = ROOMS.filter(r =>
       r.type === RoomType.ROUSS_403 ||
-      r.type === RoomType.MONROE_120 ||
+      r.type === RoomType.MONROE_120_BLOCKBUST ||
       r.type === RoomType.PAVILION_VIII_BLOCKBUST
     );
 
@@ -228,7 +228,7 @@ export function isRoomValidForBlockBusting(
   const isBlockBustingCourse = isBlockBusting(timeSlot, course.duration);
   const isBlockBustingRoomType =
     room.type === RoomType.ROUSS_403 ||
-    room.type === RoomType.MONROE_120 ||
+    room.type === RoomType.MONROE_120_BLOCKBUST ||
     room.type === RoomType.PAVILION_VIII_BLOCKBUST;
 
   // If course is block-busting, MUST use block-busting room

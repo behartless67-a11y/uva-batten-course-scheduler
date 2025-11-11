@@ -25,24 +25,24 @@ export enum CourseType {
 }
 
 export enum RoomType {
-  DELL = 'Dell',
+  MONROE_120 = 'Monroe 120',
   ROUSS = 'Rouss Hall',
   PAVILION_VIII = 'Pavilion VIII',
   UREG_ASSIGNED = 'UREG Assigned',
   // Block-busting rooms (for classes outside standard university scheduling blocks)
   ROUSS_403 = 'Rouss 403',
-  MONROE_120 = 'Monroe 120',
+  MONROE_120_BLOCKBUST = 'Monroe 120 (Block-Bust)',
   PAVILION_VIII_BLOCKBUST = 'Pavilion VIII (Block-Bust)',
 }
 
 export const ROOM_CAPACITIES = {
-  [RoomType.DELL]: 60,
+  [RoomType.MONROE_120]: 60,
   [RoomType.ROUSS]: 48,
   [RoomType.PAVILION_VIII]: 18,
   [RoomType.UREG_ASSIGNED]: 30, // Default
   // Block-busting room capacities
   [RoomType.ROUSS_403]: 48,
-  [RoomType.MONROE_120]: 60,
+  [RoomType.MONROE_120_BLOCKBUST]: 60,
   [RoomType.PAVILION_VIII_BLOCKBUST]: 18,
 };
 

@@ -152,7 +152,7 @@ export function getBlockBustingReason(timeSlot: TimeSlot, courseDuration: number
  */
 export const BLOCK_BUSTING_ROOM_IDS = [
   'rouss-403',
-  'monroe-120',
+  'monroe-120-blockbust',
   'pavilion-viii-blockbust',
 ];
 

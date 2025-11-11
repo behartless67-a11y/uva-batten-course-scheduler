@@ -189,8 +189,8 @@ export function parseCombinedData(file: File): Promise<{ faculty: Faculty[], cou
 
           // Parse preferred room if specified
           let preferredRoom: RoomType | undefined;
-          if (notes?.toLowerCase().includes('dell')) {
-            preferredRoom = RoomType.DELL;
+          if (notes?.toLowerCase().includes('monroe')) {
+            preferredRoom = RoomType.MONROE_120;
           } else if (notes?.toLowerCase().includes('rouss')) {
             preferredRoom = RoomType.ROUSS;
           } else if (notes?.toLowerCase().includes('pavilion')) {
@@ -272,8 +272,8 @@ export function parseCourseData(file: File, faculty: Faculty[]): Promise<Course[
 
           // Parse preferred room if specified
           let preferredRoom: RoomType | undefined;
-          if (row.notes?.toLowerCase().includes('dell')) {
-            preferredRoom = RoomType.DELL;
+          if (row.notes?.toLowerCase().includes('monroe')) {
+            preferredRoom = RoomType.MONROE_120;
           } else if (row.notes?.toLowerCase().includes('rouss')) {
             preferredRoom = RoomType.ROUSS;
           } else if (row.notes?.toLowerCase().includes('pavilion')) {

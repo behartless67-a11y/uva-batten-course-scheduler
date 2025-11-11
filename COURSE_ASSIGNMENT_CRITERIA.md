@@ -104,21 +104,7 @@ These constraints **CANNOT** be violated. The scheduler will reject any schedule
 
 ---
 
-### 6. Maximum Workload Cap
-
-**Rule:** No faculty member can be assigned more than 4 courses in a single semester
-
-**Hard Cap:** 4 courses per faculty
-
-**Rationale:** Prevents burnout and ensures teaching quality
-
-**Implementation:** `selectBestFaculty()` method filters out faculty at 4+ courses
-
-**Note:** This is a HARD stop - scheduler will refuse to assign 5th course
-
----
-
-### 7. Block-Busting Room Requirements
+### 6. Block-Busting Room Requirements
 
 **Rule:** Classes scheduled outside standard university scheduling blocks MUST use designated block-busting rooms
 
@@ -151,7 +137,7 @@ Block-busting classes MUST be assigned to ONE of these rooms:
 - TR class starting at 3:00 PM in Monroe 120
 
 ❌ **Invalid (will generate ERROR conflict):**
-- 80-minute MW class in Dell (standard room)
+- 80-minute MW class in Monroe 120 (standard room)
 - TR class starting at 3:00 PM in Rouss Hall (standard room)
 
 **Implementation:**
@@ -165,7 +151,7 @@ Block-busting classes MUST be assigned to ONE of these rooms:
 
 ---
 
-### 8. Earliest Start Time
+### 7. Earliest Start Time
 
 **Rule:** No classes can start before 9:30 AM
 
@@ -179,7 +165,7 @@ Block-busting classes MUST be assigned to ONE of these rooms:
 
 ---
 
-### 9. Student Cohort Schedule Protection
+### 8. Student Cohort Schedule Protection
 
 **Rule:** Required courses for the same student cohort (program + year) cannot overlap
 
@@ -235,7 +221,7 @@ These constraints should be satisfied when possible, but can be relaxed if neces
 
 ### 2. Friday Electives Avoidance
 
-**Rule:** Avoid scheduling elective courses on Fridays unless specifically allowed
+**Rule:** Avoid scheduling elective courses on Fridays unless specifically allowed or requested by faculty
 
 **Config Flag:** `allowFridayElectives` (default: false)
 
@@ -244,7 +230,8 @@ These constraints should be satisfied when possible, but can be relaxed if neces
 **Exceptions:**
 - Core courses can be scheduled on Friday
 - Capstone courses can be scheduled on Friday
-- Can be enabled if Friday sections are necessary
+- Allow two sections of LPPP 7750 on Friday morning
+- Can be enabled if Friday sections are necessary or requested by faculty
 
 **Implementation:** Time slot generation skips Friday for electives when flag is false
 
@@ -294,22 +281,6 @@ These constraints should be satisfied when possible, but can be relaxed if neces
 **Special Cases:**
 - **LPPP 7750** (6 sections): Should be distributed across at least 3 different days of the week
 - Helps accommodate MPP Year 2 students' varying schedules
-
----
-
-### 4. Mixed Elective Sections Preference
-
-**Rule:** Prefer having multiple different electives in the same time slot (rather than all same course)
-
-**Config Flag:** `preferMixedElectives` (default: true)
-
-**Rationale:** Provides students with more choices in each time slot
-
-**Example:**
-- PREFER: Slot A has "Program Evaluation" + "Cost-Benefit Analysis"
-- AVOID: Slot A has both sections of "Program Evaluation"
-
-**Implementation:** Scheduler scoring algorithm
 
 ---
 
@@ -531,13 +502,14 @@ Final Score = (workloadEquity × 0.35) +
 ### 1. Room Priority by Building
 
 **Priority Order:**
-1. **Dell** (highest priority - Batten School's primary building)
-2. **Rouss** (secondary priority - convenient location)
-3. **Pavilion VIII** (fallback option)
+1. **Monroe 120** (highest priority - 60 capacity, large lecture hall)
+2. **Rouss Hall** (secondary priority - 48 capacity, medium courses)
+3. **Pavilion VIII** (18 capacity - small courses, capstones)
+4. **UREG Assigned** (fallback - registrar assigns later)
 
-**Implementation:** `assignRooms()` method in scheduler.ts
+**Implementation:** `assignRoom()` method in roomAssignment.ts
 
-**Rationale:** Dell is preferred for branding and student convenience
+**Rationale:** Monroe 120 is the primary large lecture hall for the Batten School
 
 ---
 
@@ -552,10 +524,10 @@ Final Score = (workloadEquity × 0.35) +
 4. Assign first available room
 
 **Example:**
-- Section has 30 students
-- Dell 1: 40 capacity ✅ (preferred - smallest in Dell)
-- Dell 2: 60 capacity (too large, would waste space)
-- Rouss 1: 35 capacity (fallback if Dell 1 unavailable)
+- Section has 50 students
+- Monroe 120: 60 capacity ✅ (preferred - fits requirement)
+- Rouss Hall: 48 capacity (too small)
+- UREG: 30 capacity (fallback if Monroe unavailable)
 
 ---
 
