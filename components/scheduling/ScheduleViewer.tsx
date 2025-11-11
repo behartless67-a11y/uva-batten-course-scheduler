@@ -1,12 +1,76 @@
 'use client';
 
 import { useState } from 'react';
-import { Schedule, Course, Faculty, DayOfWeek, ScheduledSection, TimeSlot } from '@/types/scheduling';
+import { Schedule, Course, Faculty, DayOfWeek, ScheduledSection, TimeSlot, StudentCohort } from '@/types/scheduling';
 import { Download, Grid, List, Search, Wand2, ChevronDown, ChevronUp, User } from 'lucide-react';
 import { exportScheduleToExcel, exportConflictsToExcel } from '@/lib/utils/fileParser';
 import { formatTimeRange12Hour } from '@/lib/utils/timeFormat';
 import ConflictResolutionWizard, { ConflictResolution } from './ConflictResolutionWizard';
 import { TIME_SLOTS } from '@/lib/scheduling/timeSlots';
+
+/**
+ * Get cohort color classes for a course based on its target students
+ * Returns background and border color classes
+ */
+function getCohortColors(course: Course | undefined): { bg: string; border: string; text: string } {
+  if (!course || !course.targetStudents || course.targetStudents.length === 0) {
+    return { bg: 'bg-gray-50', border: 'border-gray-300', text: 'text-gray-900' };
+  }
+
+  // Use the primary (first) target cohort for color coding
+  const primaryCohort = course.targetStudents[0];
+  const cohortKey = `${primaryCohort.program}-${primaryCohort.year}`;
+
+  const colorMap: Record<string, { bg: string; border: string; text: string }> = {
+    // MPP Year 1 - Blue shades
+    'MPP_Postgrad-1': { bg: 'bg-blue-100', border: 'border-blue-400', text: 'text-blue-900' },
+    'MPP_Accel-1': { bg: 'bg-blue-100', border: 'border-blue-400', text: 'text-blue-900' },
+
+    // MPP Year 2 - Indigo shades
+    'MPP_Postgrad-2': { bg: 'bg-indigo-100', border: 'border-indigo-400', text: 'text-indigo-900' },
+    'MPP_Accel-2': { bg: 'bg-indigo-100', border: 'border-indigo-400', text: 'text-indigo-900' },
+
+    // BA Year 1 - Purple shades
+    'BA-1': { bg: 'bg-purple-100', border: 'border-purple-400', text: 'text-purple-900' },
+
+    // BA Year 2 - Pink shades
+    'BA-2': { bg: 'bg-pink-100', border: 'border-pink-400', text: 'text-pink-900' },
+
+    // BA Year 3 - Rose shades
+    'BA-3': { bg: 'bg-rose-100', border: 'border-rose-400', text: 'text-rose-900' },
+
+    // BA Year 4 - Red shades
+    'BA-4': { bg: 'bg-red-100', border: 'border-red-400', text: 'text-red-900' },
+
+    // Minor - Green shades
+    'Minor-1': { bg: 'bg-green-100', border: 'border-green-400', text: 'text-green-900' },
+    'Minor-2': { bg: 'bg-green-100', border: 'border-green-400', text: 'text-green-900' },
+    'Minor-3': { bg: 'bg-green-100', border: 'border-green-400', text: 'text-green-900' },
+    'Minor-4': { bg: 'bg-green-100', border: 'border-green-400', text: 'text-green-900' },
+
+    // Cert - Amber shades
+    'Cert-1': { bg: 'bg-amber-100', border: 'border-amber-400', text: 'text-amber-900' },
+    'Cert-2': { bg: 'bg-amber-100', border: 'border-amber-400', text: 'text-amber-900' },
+    'Cert-3': { bg: 'bg-amber-100', border: 'border-amber-400', text: 'text-amber-900' },
+    'Cert-4': { bg: 'bg-amber-100', border: 'border-amber-400', text: 'text-amber-900' },
+  };
+
+  return colorMap[cohortKey] || { bg: 'bg-gray-50', border: 'border-gray-300', text: 'text-gray-900' };
+}
+
+/**
+ * Get a display-friendly cohort label
+ */
+function getCohortLabel(cohort: StudentCohort): string {
+  const programMap: Record<string, string> = {
+    'MPP_Postgrad': 'MPP',
+    'MPP_Accel': 'MPP',
+    'BA': 'BA',
+    'Minor': 'Minor',
+    'Cert': 'Cert',
+  };
+  return `${programMap[cohort.program]} Year ${cohort.year}`;
+}
 
 interface ScheduleViewerProps {
   schedule: Schedule;
@@ -365,6 +429,45 @@ export default function ScheduleViewer({ schedule, courses, faculty }: ScheduleV
 
       {/* Content */}
       <div className="p-6">
+        {/* Color Legend */}
+        <div className="mb-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+          <h3 className="font-semibold text-gray-900 mb-3 text-sm">Student Cohort Color Legend</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2 text-xs">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-blue-100 border-2 border-blue-400"></div>
+              <span className="text-gray-700">MPP Year 1</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-indigo-100 border-2 border-indigo-400"></div>
+              <span className="text-gray-700">MPP Year 2</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-purple-100 border-2 border-purple-400"></div>
+              <span className="text-gray-700">BA Year 1</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-pink-100 border-2 border-pink-400"></div>
+              <span className="text-gray-700">BA Year 2</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-rose-100 border-2 border-rose-400"></div>
+              <span className="text-gray-700">BA Year 3</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-red-100 border-2 border-red-400"></div>
+              <span className="text-gray-700">BA Year 4</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-green-100 border-2 border-green-400"></div>
+              <span className="text-gray-700">Minor</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-amber-100 border-2 border-amber-400"></div>
+              <span className="text-gray-700">Certificate</span>
+            </div>
+          </div>
+        </div>
+
         {/* Faculty Panel for Drag & Drop */}
         <div className="mb-6 bg-gray-50 rounded-lg p-4 border border-gray-200">
           <h3 className="font-semibold text-gray-900 mb-3">Faculty Members (Drag to Reassign)</h3>
@@ -488,17 +591,23 @@ export default function ScheduleViewer({ schedule, courses, faculty }: ScheduleV
                         <div className="space-y-2">
                           {facultySections.map(section => {
                             const course = courseMap.get(section.courseId);
+                            const colors = getCohortColors(course);
                             return (
                               <div
                                 key={section.id}
-                                className="flex items-center justify-between bg-gray-50 rounded px-3 py-2 text-sm"
+                                className={`flex items-center justify-between ${colors.bg} rounded px-3 py-2 text-sm border-l-4 ${colors.border}`}
                               >
                                 <div className="flex-1">
-                                  <span className="font-medium text-gray-900">
+                                  <span className={`font-medium ${colors.text}`}>
                                     {course?.code} - {course?.name}
                                   </span>
                                   {section.sectionNumber > 1 && (
-                                    <span className="text-gray-500 ml-1">(Section {section.sectionNumber})</span>
+                                    <span className="text-gray-600 ml-1">(Section {section.sectionNumber})</span>
+                                  )}
+                                  {course && course.targetStudents && course.targetStudents.length > 0 && (
+                                    <span className="ml-2 text-xs text-gray-600">
+                                      [{getCohortLabel(course.targetStudents[0])}]
+                                    </span>
                                   )}
                                 </div>
                                 <div className="flex items-center gap-4 text-gray-600">
@@ -637,6 +746,7 @@ function GridView({
                         const course = courseMap.get(section.courseId);
                         const facultyMember = facultyMap.get(section.facultyId);
                         const isDragOver = dragOverSection === section.id;
+                        const colors = getCohortColors(course);
                         return (
                           <div
                             key={section.id}
@@ -648,11 +758,16 @@ function GridView({
                             className={`border-l-4 rounded p-2 text-sm transition-all cursor-move ${
                               isDragOver
                                 ? 'bg-green-100 border-green-500 ring-2 ring-green-500'
-                                : 'bg-uva-orange bg-opacity-10 border-uva-orange hover:bg-opacity-20'
+                                : `${colors.bg} ${colors.border} hover:opacity-90`
                             }`}
                           >
-                            <p className="font-semibold text-uva-navy">{course?.code}</p>
+                            <p className={`font-semibold ${colors.text}`}>{course?.code}</p>
                             <p className="text-xs text-gray-700 mt-1">{course?.name}</p>
+                            {course && course.targetStudents && course.targetStudents.length > 0 && (
+                              <p className="text-xs text-gray-600 mt-1 font-medium">
+                                {getCohortLabel(course.targetStudents[0])}
+                              </p>
+                            )}
                             <p className="text-xs text-gray-600 mt-1 font-medium">{facultyMember?.name}</p>
                             <p className="text-xs text-gray-500 mt-1">
                               {section.room.name} ({section.enrollmentCap} students)
