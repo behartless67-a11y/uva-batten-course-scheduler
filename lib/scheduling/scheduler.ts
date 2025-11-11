@@ -217,12 +217,15 @@ export class CourseScheduler {
   /**
    * Calculate workload equity score (0-100)
    * Higher score = more equitable assignment
+   * CRITICAL: Ensures every faculty member teaches at least one course
    */
   private calculateWorkloadEquityScore(facultyId: string, workload: Map<string, number>): number {
     const currentLoad = workload.get(facultyId) || 0;
 
-    // Exponential preference for unassigned or lightly loaded faculty
-    if (currentLoad === 0) return 100; // Strongly prefer unassigned
+    // MASSIVE preference for unassigned faculty to ensure everyone teaches at least 1 course
+    // With workloadEquity weight of 0.35, a score of 150 gives 52.5 points
+    // This is enough to overcome all other factors (max ~47.5 points)
+    if (currentLoad === 0) return 150; // STRONGLY prefer unassigned faculty
     if (currentLoad === 1) return 80;
     if (currentLoad === 2) return 60;
     if (currentLoad === 3) return 35;
