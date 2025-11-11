@@ -165,6 +165,54 @@ Block-busting classes MUST be assigned to ONE of these rooms:
 
 ---
 
+### 8. Earliest Start Time
+
+**Rule:** No classes can start before 9:30 AM
+
+**Rationale:** Accommodates student schedules and faculty preferences
+
+**Implementation:** All time slots in `lib/scheduling/timeSlots.ts` start at 9:30 AM or later
+
+**Example:**
+- ✅ Valid: Class at 9:30 AM
+- ❌ Invalid: Class at 8:30 AM (slot removed from system)
+
+---
+
+### 9. Student Cohort Schedule Protection
+
+**Rule:** Required courses for the same student cohort (program + year) cannot overlap
+
+**Cohorts Tracked:**
+- MPP Year 1 (MPP_Postgrad first-year students)
+- MPP Year 2 (MPP_Postgrad second-year students)
+- BA Year 1, 2, 3, 4 (Undergraduate students by year)
+- Minor students
+- Certificate students
+
+**Source Data:** `targetPrograms` field in course CSV (e.g., "MPP Year 1", "BA Year 3")
+
+**Examples:**
+
+❌ **Invalid:**
+- LPPA 7110 (MPP Year 1) scheduled Monday 9:30-10:50
+- LPPA 7160 (MPP Year 1) scheduled Monday 9:30-10:50
+- → These overlap, preventing MPP Year 1 students from taking both required courses
+
+✅ **Valid:**
+- LPPA 7110 (MPP Year 1) scheduled Monday 9:30-10:50
+- LPPA 7160 (MPP Year 1) scheduled Tuesday 9:30-10:50
+- → Different times allow all MPP Year 1 students to enroll in both
+
+**Implementation:**
+- Detection: `detectStudentCohortOverlaps()` in `lib/scheduling/conflictDetection.ts`
+- Checks `targetStudents` array in Course type
+- Generates ERROR conflict if same cohort courses overlap
+
+**Rationale:** Students in a specific program/year must be able to take all required courses for their cohort
+
+---
+
 ## Soft Constraints (Preferences & Optimization)
 
 These constraints should be satisfied when possible, but can be relaxed if necessary.
@@ -211,6 +259,41 @@ These constraints should be satisfied when possible, but can be relaxed if neces
 **Rationale:** Student engagement and attendance concerns
 
 **Flexibility:** Can be disabled if necessary for capacity reasons
+
+---
+
+### 4. Section Distribution for Multi-Section Courses
+
+**Rule:** Sections of the same course should be distributed across different times and days
+
+**Purpose:** Provides students with multiple time options for scheduling flexibility
+
+**Warning Generated When:**
+- 2+ sections of the same course are scheduled at identical times
+- Special case: Courses with 4+ sections (like LPPP 7750) should span at least 3 different days
+
+**Examples:**
+
+❌ **Poor Distribution:**
+- LPPP 7750 Section 1: Friday 9:30-12:00
+- LPPP 7750 Section 2: Friday 9:30-12:00
+- LPPP 7750 Section 3: Friday 1:00-3:30
+- → All sections on same day, limiting student choice
+
+✅ **Good Distribution:**
+- LPPP 7750 Section 1: Monday 9:30-12:00
+- LPPP 7750 Section 2: Wednesday 1:00-3:30
+- LPPP 7750 Section 3: Friday 9:30-12:00
+- → Spread across multiple days provides flexibility
+
+**Implementation:**
+- Detection: `detectSectionClustering()` in `lib/scheduling/conflictDetection.ts`
+- Conflict type: `SECTION_CLUSTERING`
+- Severity: WARNING (soft constraint)
+
+**Special Cases:**
+- **LPPP 7750** (6 sections): Should be distributed across at least 3 different days of the week
+- Helps accommodate MPP Year 2 students' varying schedules
 
 ---
 

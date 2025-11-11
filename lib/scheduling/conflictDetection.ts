@@ -54,6 +54,9 @@ export function detectConflicts(
   // 12. Block-busting violations (classes outside standard scheduling blocks)
   conflicts.push(...detectBlockBustingViolations(sections, courses));
 
+  // 13. Multi-section course clustering (e.g., LPPP 7750 sections should be distributed)
+  conflicts.push(...detectSectionClustering(sections, courses));
+
   return conflicts;
 }
 
@@ -513,6 +516,82 @@ function detectBlockBustingViolations(
         description: `Standard course should not use block-busting room ${section.room.name}. Reserve these rooms for block-busting classes.`,
         affectedSections: [section.id],
       });
+    }
+  });
+
+  return conflicts;
+}
+
+/**
+ * Detect section clustering for multi-section courses
+ *
+ * For courses with many sections (e.g., LPPP 7750 with 6 sections), prefer distributing
+ * sections across different days/times rather than clustering them together.
+ *
+ * This helps students have more flexibility in choosing section times.
+ */
+function detectSectionClustering(
+  sections: ScheduledSection[],
+  courses: Course[]
+): Conflict[] {
+  const conflicts: Conflict[] = [];
+
+  // Group sections by course
+  const sectionsByCourse = new Map<string, ScheduledSection[]>();
+  sections.forEach(section => {
+    if (!sectionsByCourse.has(section.courseId)) {
+      sectionsByCourse.set(section.courseId, []);
+    }
+    sectionsByCourse.get(section.courseId)!.push(section);
+  });
+
+  // Check each multi-section course
+  sectionsByCourse.forEach((courseSections, courseId) => {
+    const course = courses.find(c => c.id === courseId);
+    if (!course || courseSections.length < 3) return; // Only flag if 3+ sections
+
+    // Check for clustering: if multiple sections have the same time slot
+    const timeSlotCounts = new Map<string, ScheduledSection[]>();
+    courseSections.forEach(section => {
+      const timeKey = `${section.timeSlot.days.join(',')}-${section.timeSlot.startTime}`;
+      if (!timeSlotCounts.has(timeKey)) {
+        timeSlotCounts.set(timeKey, []);
+      }
+      timeSlotCounts.get(timeKey)!.push(section);
+    });
+
+    // Flag if 2+ sections are at the exact same time
+    timeSlotCounts.forEach((clusteredSections, timeKey) => {
+      if (clusteredSections.length >= 2) {
+        conflicts.push({
+          id: `section-clustering-${courseId}-${timeKey}`,
+          type: ConflictType.SECTION_CLUSTERING,
+          severity: 'warning',
+          description: `${course.code}: ${clusteredSections.length} sections clustered at same time. Distribute sections across different times for student flexibility.`,
+          affectedSections: clusteredSections.map(s => s.id),
+          affectedCourses: [courseId],
+        });
+      }
+    });
+
+    // Special check for LPPP 7750 (Advanced Policy Project 2) - should be well distributed
+    if (course.code === 'LPPP 7750' && courseSections.length >= 4) {
+      const uniqueDays = new Set<string>();
+      courseSections.forEach(section => {
+        section.timeSlot.days.forEach(day => uniqueDays.add(day));
+      });
+
+      // Ideally, 6 sections should span 4-5 different days
+      if (uniqueDays.size < 3) {
+        conflicts.push({
+          id: `lppp-7750-poor-distribution`,
+          type: ConflictType.SECTION_CLUSTERING,
+          severity: 'warning',
+          description: `LPPP 7750 (${courseSections.length} sections) should be distributed across more days of the week (currently only ${uniqueDays.size} days).`,
+          affectedSections: courseSections.map(s => s.id),
+          affectedCourses: [courseId],
+        });
+      }
     }
   });
 

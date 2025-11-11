@@ -107,6 +107,137 @@ export function parseFacultyPreferences(file: File): Promise<Faculty[]> {
 }
 
 /**
+ * Parse combined course and faculty data from a single Excel/CSV file
+ * This is the new unified upload format
+ */
+export function parseCombinedData(file: File): Promise<{ faculty: Faculty[], courses: Course[] }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+        // Build unique faculty list from rows
+        const facultyMap = new Map<string, Faculty>();
+        const courses: Course[] = [];
+
+        jsonData.forEach((row: any, index) => {
+          // Extract faculty info using smart column matching
+          const facultyName = getColumnValue(row, ['faculty', 'facultyName', 'instructor', 'professor']);
+          const email = getColumnValue(row, ['facultyEmail', 'email', 'emailAddress']);
+          const preferredDays = getColumnValue(row, ['facultyPreferredDays', 'preferredDays', 'preferred_days']);
+          const cannotTeachDays = getColumnValue(row, ['facultyCannotTeachDays', 'cannotTeachDays', 'cannot_teach_days']);
+          const shareParenting = getColumnValue(row, ['shareParentingWith', 'share_parenting_with', 'partner']);
+
+          // Add or update faculty in map
+          if (facultyName && !facultyMap.has(facultyName)) {
+            const facultyId = `faculty-${facultyMap.size + 1}`;
+            facultyMap.set(facultyName, {
+              id: facultyId,
+              name: facultyName,
+              email: email,
+              preferences: [
+                {
+                  id: `pref-${facultyId}`,
+                  preferredDays: preferredDays ? parseDays(preferredDays) : undefined,
+                  avoidDays: cannotTeachDays ? parseDays(cannotTeachDays) : undefined,
+                  priority: 'medium',
+                },
+              ],
+              hardConstraints: cannotTeachDays
+                ? [
+                    {
+                      id: `constraint-${facultyId}`,
+                      type: 'cannot_teach_day',
+                      days: parseDays(cannotTeachDays),
+                      description: `Cannot teach on ${cannotTeachDays}`,
+                    },
+                  ]
+                : [],
+              shareParentingWith: shareParenting,
+            });
+          }
+
+          // Parse course data
+          const code = getColumnValue(row, ['code', 'courseCode', 'course_code']);
+          const name = getColumnValue(row, ['name', 'courseName', 'course_name', 'title']);
+          const type = getColumnValue(row, ['type', 'courseType', 'course_type']);
+          const enrollmentCap = getColumnValue(row, ['enrollmentCap', 'enrollment_cap', 'capacity', 'enrollment']);
+          const numberOfSections = getColumnValue(row, ['numberOfSections', 'number_of_sections', 'sections']);
+          const numberOfDiscussions = getColumnValue(row, ['numberOfDiscussions', 'number_of_discussions', 'discussions']);
+          const duration = getColumnValue(row, ['duration', 'length', 'minutes']);
+          const sessionsPerWeek = getColumnValue(row, ['sessionsPerWeek', 'sessions_per_week', 'sessions']);
+          const targetPrograms = getColumnValue(row, ['targetPrograms', 'target_programs', 'cohort', 'cohorts', 'programs']);
+          const notes = getColumnValue(row, ['notes', 'comments', 'description']);
+
+          // Parse course type
+          let courseType = CourseType.ELECTIVE;
+          const typeStr = (type || '').toLowerCase();
+          if (typeStr.includes('core')) courseType = CourseType.CORE;
+          else if (typeStr.includes('capstone')) courseType = CourseType.CAPSTONE;
+          else if (typeStr.includes('advanced')) courseType = CourseType.ADVANCED_PROJECT;
+
+          // Parse course level based on course code
+          const courseNumber = parseInt(code?.match(/\d+/)?.[0] || '0');
+          const level =
+            courseNumber >= 5000 ? CourseLevel.GRADUATE : CourseLevel.UNDERGRADUATE;
+
+          // Parse preferred room if specified
+          let preferredRoom: RoomType | undefined;
+          if (notes?.toLowerCase().includes('dell')) {
+            preferredRoom = RoomType.DELL;
+          } else if (notes?.toLowerCase().includes('rouss')) {
+            preferredRoom = RoomType.ROUSS;
+          } else if (notes?.toLowerCase().includes('pavilion')) {
+            preferredRoom = RoomType.PAVILION_VIII;
+          }
+
+          const facultyMember = facultyMap.get(facultyName);
+
+          courses.push({
+            id: `course-${index + 1}`,
+            code: code,
+            name: name,
+            type: courseType,
+            level,
+            facultyId: facultyMember?.id || `faculty-unknown-${index}`,
+            enrollmentCap: parseInt(enrollmentCap) || 0,
+            numberOfSections: parseInt(numberOfSections) || 1,
+            numberOfDiscussions: numberOfDiscussions ? parseInt(numberOfDiscussions) : undefined,
+            duration: parseInt(duration) || 50,
+            sessionsPerWeek: parseInt(sessionsPerWeek) || 2,
+            targetStudents: parseTargetPrograms(targetPrograms),
+            preferredRoom,
+            notes: notes,
+            requiresLargeLectureHall: (parseInt(numberOfSections) || 1) === 1 && courseType === CourseType.CORE,
+            requiresSmallRoom: courseType === CourseType.CAPSTONE,
+          });
+        });
+
+        resolve({
+          faculty: Array.from(facultyMap.values()),
+          courses: courses,
+        });
+      } catch (error) {
+        console.error('Parse error:', error);
+        reject(new Error('Failed to parse combined course/faculty file'));
+      }
+    };
+
+    reader.onerror = () => {
+      reject(new Error('Failed to read file'));
+    };
+
+    reader.readAsBinaryString(file);
+  });
+}
+
+/**
  * Parse course data from Excel/CSV file
  */
 export function parseCourseData(file: File, faculty: Faculty[]): Promise<Course[]> {

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Upload, FileSpreadsheet, CheckCircle, AlertCircle } from 'lucide-react';
-import { parseFacultyPreferences, parseCourseData } from '@/lib/utils/fileParser';
+import { parseCombinedData } from '@/lib/utils/fileParser';
 import { Faculty, Course } from '@/types/scheduling';
 
 interface FileUploadSectionProps {
@@ -10,28 +10,20 @@ interface FileUploadSectionProps {
 }
 
 export default function FileUploadSection({ onFilesUploaded }: FileUploadSectionProps) {
-  const [facultyFile, setFacultyFile] = useState<File | null>(null);
-  const [courseFile, setCourseFile] = useState<File | null>(null);
+  const [dataFile, setDataFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleFacultyFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFacultyFile(e.target.files[0]);
-      setError(null);
-    }
-  };
-
-  const handleCourseFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setCourseFile(e.target.files[0]);
+      setDataFile(e.target.files[0]);
       setError(null);
     }
   };
 
   const handleUpload = async () => {
-    if (!facultyFile || !courseFile) {
-      setError('Please upload both faculty preferences and course data files');
+    if (!dataFile) {
+      setError('Please upload a course and faculty data file');
       return;
     }
 
@@ -39,20 +31,16 @@ export default function FileUploadSection({ onFilesUploaded }: FileUploadSection
     setError(null);
 
     try {
-      console.log('Starting to parse faculty file:', facultyFile.name);
-      // Parse faculty preferences first
-      const faculty = await parseFacultyPreferences(facultyFile);
+      console.log('Starting to parse combined data file:', dataFile.name);
+      // Parse combined course and faculty data
+      const { faculty, courses } = await parseCombinedData(dataFile);
       console.log('Parsed faculty:', faculty.length, 'members');
-
-      console.log('Starting to parse course file:', courseFile.name);
-      // Parse course data (needs faculty for matching)
-      const courses = await parseCourseData(courseFile, faculty);
       console.log('Parsed courses:', courses.length, 'courses');
 
       onFilesUploaded(faculty, courses);
     } catch (err) {
-      console.error('Error parsing files:', err);
-      setError(err instanceof Error ? err.message : 'Failed to parse files');
+      console.error('Error parsing file:', err);
+      setError(err instanceof Error ? err.message : 'Failed to parse file');
     } finally {
       setLoading(false);
     }
@@ -62,80 +50,66 @@ export default function FileUploadSection({ onFilesUploaded }: FileUploadSection
     <div className="bg-white rounded-lg shadow-md p-6 w-full">
       <h2 className="text-3xl font-bold text-uva-navy mb-4">Upload Course and Faculty Data</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-        {/* Faculty Preferences Upload */}
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-5 hover:border-uva-orange transition-colors">
+      <div className="mb-6">
+        {/* Combined Data Upload */}
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-uva-orange transition-colors">
           <div className="text-center">
-            <FileSpreadsheet className="w-10 h-10 text-uva-orange mx-auto mb-2" />
-            <h3 className="font-bold text-lg text-gray-900 mb-2">Faculty Preferences</h3>
-            <p className="text-base text-gray-600 mb-3">
-              Upload Excel or CSV with faculty preferences
+            <FileSpreadsheet className="w-12 h-12 text-uva-orange mx-auto mb-3" />
+            <h3 className="font-bold text-xl text-gray-900 mb-2">Upload Combined Course & Faculty Data</h3>
+            <p className="text-base text-gray-600 mb-4">
+              Upload a single Excel or CSV file with course and faculty information
             </p>
 
             <label className="cursor-pointer">
               <input
                 type="file"
                 accept=".xlsx,.xls,.csv"
-                onChange={handleFacultyFileChange}
+                onChange={handleFileChange}
                 className="hidden"
               />
-              <span className="inline-block px-5 py-2.5 text-base bg-uva-navy text-white rounded-lg hover:bg-uva-blue-light transition-colors font-semibold">
+              <span className="inline-block px-6 py-3 text-base bg-uva-navy text-white rounded-lg hover:bg-uva-blue-light transition-colors font-semibold">
                 Choose File
               </span>
             </label>
 
-            {facultyFile && (
+            {dataFile && (
               <div className="mt-4 flex items-center justify-center gap-2 text-green-600">
-                <CheckCircle className="w-4 h-4" />
-                <span className="text-sm font-medium">{facultyFile.name}</span>
+                <CheckCircle className="w-5 h-5" />
+                <span className="text-base font-medium">{dataFile.name}</span>
               </div>
             )}
           </div>
 
-          <div className="mt-4 text-left">
-            <p className="font-bold mb-2 text-base text-gray-700">Expected columns:</p>
-            <div className="text-base text-gray-600 space-y-1">
-              <div><strong className="text-uva-navy">facultyName</strong>, <strong className="text-uva-navy">preferredDays</strong>, <strong className="text-uva-navy">cannotTeachDays</strong></div>
-              <div className="text-sm text-gray-500">Optional: email, shareParentingWith</div>
+          <div className="mt-6 text-left bg-gray-50 rounded-lg p-4">
+            <p className="font-bold mb-3 text-base text-gray-800">Required columns:</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600">
+              <div>
+                <p className="font-semibold text-gray-700 mb-1">Course Information:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li><strong>code</strong> - Course code (e.g., LPPA 7110)</li>
+                  <li><strong>name</strong> - Course name</li>
+                  <li><strong>type</strong> - Core/Elective/Capstone</li>
+                  <li><strong>enrollmentCap</strong> - Max students</li>
+                  <li><strong>numberOfSections</strong> - Number of sections</li>
+                  <li><strong>duration</strong> - Minutes per session</li>
+                  <li><strong>sessionsPerWeek</strong> - Meetings per week</li>
+                  <li><strong>targetPrograms</strong> - Student cohorts (e.g., "MPP Year 1")</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-semibold text-gray-700 mb-1">Faculty Information:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li><strong>faculty</strong> - Faculty name</li>
+                  <li><strong>facultyEmail</strong> - Email address</li>
+                  <li><strong>facultyPreferredDays</strong> - Preferred teaching days</li>
+                  <li><strong>facultyCannotTeachDays</strong> - Days unavailable</li>
+                  <li><strong>shareParentingWith</strong> - Partner faculty name</li>
+                </ul>
+              </div>
             </div>
-          </div>
-        </div>
-
-        {/* Course Data Upload */}
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-5 hover:border-uva-orange transition-colors">
-          <div className="text-center">
-            <Upload className="w-10 h-10 text-uva-orange mx-auto mb-2" />
-            <h3 className="font-bold text-lg text-gray-900 mb-2">Course Data</h3>
-            <p className="text-base text-gray-600 mb-3">
-              Upload Excel or CSV with course information
+            <p className="text-xs text-gray-500 mt-3">
+              Optional: numberOfDiscussions, notes
             </p>
-
-            <label className="cursor-pointer">
-              <input
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                onChange={handleCourseFileChange}
-                className="hidden"
-              />
-              <span className="inline-block px-5 py-2.5 text-base bg-uva-navy text-white rounded-lg hover:bg-uva-blue-light transition-colors font-semibold">
-                Choose File
-              </span>
-            </label>
-
-            {courseFile && (
-              <div className="mt-4 flex items-center justify-center gap-2 text-green-600">
-                <CheckCircle className="w-4 h-4" />
-                <span className="text-sm font-medium">{courseFile.name}</span>
-              </div>
-            )}
-          </div>
-
-          <div className="mt-4 text-left">
-            <p className="font-bold mb-2 text-base text-gray-700">Expected columns:</p>
-            <div className="text-base text-gray-600 space-y-1">
-              <div><strong className="text-uva-navy">code</strong>, <strong className="text-uva-navy">name</strong>, <strong className="text-uva-navy">type</strong>, <strong className="text-uva-navy">faculty</strong></div>
-              <div><strong className="text-uva-navy">enrollmentCap</strong>, <strong className="text-uva-navy">numberOfSections</strong>, <strong className="text-uva-navy">duration</strong>, <strong className="text-uva-navy">sessionsPerWeek</strong></div>
-            </div>
           </div>
         </div>
       </div>
@@ -149,10 +123,10 @@ export default function FileUploadSection({ onFilesUploaded }: FileUploadSection
 
       <button
         onClick={handleUpload}
-        disabled={!facultyFile || !courseFile || loading}
+        disabled={!dataFile || loading}
         className="w-full px-6 py-3 bg-uva-orange text-white rounded-lg font-semibold hover:bg-uva-orange-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {loading ? 'Processing Files...' : 'Continue to Configuration'}
+        {loading ? 'Processing File...' : 'Continue to Configuration'}
       </button>
     </div>
   );
@@ -162,24 +136,17 @@ export default function FileUploadSection({ onFilesUploaded }: FileUploadSection
 export function TemplateDownloadSection() {
   return (
     <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-      <h4 className="font-semibold text-blue-900 mb-2">Sample Templates</h4>
+      <h4 className="font-semibold text-blue-900 mb-2">Sample Template</h4>
       <p className="text-sm text-blue-700 mb-3">
-        Download sample Excel templates to see the expected format:
+        Download a sample CSV template to see the expected format:
       </p>
       <div className="flex gap-3">
         <a
-          href="/templates/faculty-template.csv"
-          download="faculty-template.csv"
+          href="/templates/course-faculty-template.csv"
+          download="course-faculty-template.csv"
           className="text-sm text-uva-orange hover:text-uva-orange-light font-medium underline cursor-pointer"
         >
-          Download Faculty Template
-        </a>
-        <a
-          href="/templates/course-template.csv"
-          download="course-template.csv"
-          className="text-sm text-uva-orange hover:text-uva-orange-light font-medium underline cursor-pointer"
-        >
-          Download Course Template
+          Download Combined Template
         </a>
       </div>
     </div>

@@ -1,12 +1,13 @@
 import { TimeSlot, DayOfWeek } from '@/types/scheduling';
 
 // Pre-defined common time slots
+// CONSTRAINT: No classes start before 9:30 AM
 export const TIME_SLOTS: TimeSlot[] = [
-  // Morning slots
+  // Morning slots (earliest: 9:30 AM)
   {
-    id: 'mon-wed-830-950',
-    startTime: '08:30',
-    endTime: '09:50',
+    id: 'mon-wed-930-1050',
+    startTime: '09:30',
+    endTime: '10:50',
     days: [DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY],
     isPreferredMorning: true,
   },

@@ -166,6 +166,7 @@ export enum ConflictType {
   NO_AFTERNOON_CORE_OFFERING = 'No Afternoon Core Offering',
   PARENTING_PARTNER_CONFLICT = 'Parenting Partner Conflict',
   BLOCK_BUSTING_ROOM_MISUSE = 'Block-Busting Room Misuse', // Standard course in block-busting room
+  SECTION_CLUSTERING = 'Section Clustering', // Multiple sections of same course at same time
 
   // Info
   ROOM_OVER_CAPACITY = 'Room Over Capacity',
