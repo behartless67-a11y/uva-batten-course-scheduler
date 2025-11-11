@@ -29,6 +29,10 @@ export enum RoomType {
   ROUSS = 'Rouss Hall',
   PAVILION_VIII = 'Pavilion VIII',
   UREG_ASSIGNED = 'UREG Assigned',
+  // Block-busting rooms (for classes outside standard university scheduling blocks)
+  ROUSS_403 = 'Rouss 403',
+  MONROE_120 = 'Monroe 120',
+  PAVILION_VIII_BLOCKBUST = 'Pavilion VIII (Block-Bust)',
 }
 
 export const ROOM_CAPACITIES = {
@@ -36,6 +40,10 @@ export const ROOM_CAPACITIES = {
   [RoomType.ROUSS]: 48,
   [RoomType.PAVILION_VIII]: 18,
   [RoomType.UREG_ASSIGNED]: 30, // Default
+  // Block-busting room capacities
+  [RoomType.ROUSS_403]: 48,
+  [RoomType.MONROE_120]: 60,
+  [RoomType.PAVILION_VIII_BLOCKBUST]: 18,
 };
 
 // Time Slots
@@ -149,6 +157,7 @@ export enum ConflictType {
   BATTEN_HOUR_CONFLICT = 'Batten Hour Conflict', // Monday 12:30-1:30
   CORE_OVERLAP_UNDERGRAD = 'Undergraduate Core Overlap',
   CORE_OVERLAP_GRAD = 'Graduate Core Overlap',
+  BLOCK_BUSTING_VIOLATION = 'Block-Busting Violation', // Course outside standard blocks not in special room
 
   // Soft conflicts (warnings)
   SOFT_PREFERENCE_VIOLATED = 'Faculty Preference Violated',
@@ -156,6 +165,7 @@ export enum ConflictType {
   NO_MORNING_CORE_OFFERING = 'No Morning Core Offering',
   NO_AFTERNOON_CORE_OFFERING = 'No Afternoon Core Offering',
   PARENTING_PARTNER_CONFLICT = 'Parenting Partner Conflict',
+  BLOCK_BUSTING_ROOM_MISUSE = 'Block-Busting Room Misuse', // Standard course in block-busting room
 
   // Info
   ROOM_OVER_CAPACITY = 'Room Over Capacity',

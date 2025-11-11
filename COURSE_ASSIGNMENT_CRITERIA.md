@@ -118,6 +118,53 @@ These constraints **CANNOT** be violated. The scheduler will reject any schedule
 
 ---
 
+### 7. Block-Busting Room Requirements
+
+**Rule:** Classes scheduled outside standard university scheduling blocks MUST use designated block-busting rooms
+
+**What is Block-Busting?**
+
+"Block-busting" means scheduling outside the standard university time blocks:
+
+**Standard Blocks (NOT block-busting):**
+- **Monday/Wednesday/Friday classes:** Must be 50 minutes long AND start before 3:00 PM
+- **Tuesday/Thursday classes:** Must be 75 minutes long AND start before 2:30 PM
+
+**Block-Busting Examples:**
+- 80-minute Monday/Wednesday class (violates 50-min requirement)
+- Tuesday/Thursday class starting at 2:30 PM or later (violates time cutoff)
+- Any class that doesn't fit the standard university blocks
+
+**Required Block-Busting Rooms:**
+
+Block-busting classes MUST be assigned to ONE of these rooms:
+- **Rouss 403** (capacity: 48 students)
+- **Monroe 120** (capacity: 60 students)
+- **Pavilion VIII Block-Bust** (capacity: 18 students)
+
+**Rationale:** University scheduling policy requires special room reservations for non-standard time blocks
+
+**Examples:**
+
+✅ **Valid:**
+- 80-minute MW class in Rouss 403
+- TR class starting at 3:00 PM in Monroe 120
+
+❌ **Invalid (will generate ERROR conflict):**
+- 80-minute MW class in Dell (standard room)
+- TR class starting at 3:00 PM in Rouss Hall (standard room)
+
+**Implementation:**
+- Detection: `isBlockBusting()` in `lib/utils/blockBusting.ts`
+- Room assignment: `assignRoomWithBlockBusting()` in `lib/scheduling/roomAssignment.ts`
+- Conflict detection: `detectBlockBustingViolations()` in `lib/scheduling/conflictDetection.ts`
+
+**Conflict Severity:**
+- ERROR: Block-busting course not in block-busting room
+- WARNING: Standard course assigned to block-busting room (reserves room unnecessarily)
+
+---
+
 ## Soft Constraints (Preferences & Optimization)
 
 These constraints should be satisfied when possible, but can be relaxed if necessary.

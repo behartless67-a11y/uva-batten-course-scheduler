@@ -1,7 +1,9 @@
-import { Room, RoomType, ROOM_CAPACITIES, Course, CourseType } from '@/types/scheduling';
+import { Room, RoomType, ROOM_CAPACITIES, Course, CourseType, TimeSlot } from '@/types/scheduling';
+import { isBlockBusting } from '@/lib/utils/blockBusting';
 
 // Pre-defined rooms based on requirements
 export const ROOMS: Room[] = [
+  // Standard Batten School rooms
   {
     id: 'dell',
     name: 'Dell',
@@ -20,6 +22,26 @@ export const ROOMS: Room[] = [
     type: RoomType.PAVILION_VIII,
     capacity: ROOM_CAPACITIES[RoomType.PAVILION_VIII],
   },
+  // Block-busting rooms (for classes outside standard university scheduling blocks)
+  {
+    id: 'rouss-403',
+    name: 'Rouss 403',
+    type: RoomType.ROUSS_403,
+    capacity: ROOM_CAPACITIES[RoomType.ROUSS_403],
+  },
+  {
+    id: 'monroe-120',
+    name: 'Monroe 120',
+    type: RoomType.MONROE_120,
+    capacity: ROOM_CAPACITIES[RoomType.MONROE_120],
+  },
+  {
+    id: 'pavilion-viii-blockbust',
+    name: 'Pavilion VIII (Block-Bust)',
+    type: RoomType.PAVILION_VIII_BLOCKBUST,
+    capacity: ROOM_CAPACITIES[RoomType.PAVILION_VIII_BLOCKBUST],
+  },
+  // UREG assigned rooms (registrar assigns later)
   {
     id: 'ureg-1',
     name: 'UREG Assigned Room 1',
@@ -141,4 +163,84 @@ export function suggestBestRoom(
     .sort((a, b) => a.capacity - b.capacity);
 
   return sortedByCapacity[0] || null;
+}
+
+/**
+ * Assign room considering block-busting constraints
+ *
+ * Block-busting classes (outside standard university scheduling blocks) MUST use:
+ * - Rouss 403 (48 capacity)
+ * - Monroe 120 (60 capacity)
+ * - Pavilion VIII Block-Bust (18 capacity)
+ *
+ * @param course The course to assign
+ * @param enrollmentCap The enrollment capacity
+ * @param timeSlot The time slot (optional, needed for block-busting detection)
+ * @returns The assigned room
+ */
+export function assignRoomWithBlockBusting(
+  course: Course,
+  enrollmentCap: number,
+  timeSlot?: TimeSlot
+): Room {
+  // Check if this is a block-busting course
+  const isBlockBustingCourse = timeSlot ? isBlockBusting(timeSlot, course.duration) : false;
+
+  if (isBlockBustingCourse) {
+    // MUST use block-busting rooms
+    // Priority: smallest room that fits
+    const blockBustingRooms = ROOMS.filter(r =>
+      r.type === RoomType.ROUSS_403 ||
+      r.type === RoomType.MONROE_120 ||
+      r.type === RoomType.PAVILION_VIII_BLOCKBUST
+    );
+
+    const suitableRooms = blockBustingRooms
+      .filter(r => r.capacity >= enrollmentCap)
+      .sort((a, b) => a.capacity - b.capacity);
+
+    if (suitableRooms.length > 0) {
+      return suitableRooms[0];
+    }
+
+    // If no suitable block-busting room, use the largest one
+    // (This will create a capacity conflict that should be flagged)
+    return blockBustingRooms.sort((a, b) => b.capacity - a.capacity)[0];
+  }
+
+  // Not block-busting - use standard room assignment logic
+  return assignRoom(course, enrollmentCap);
+}
+
+/**
+ * Check if a room is valid for the given time slot and course
+ *
+ * @param room The room to check
+ * @param course The course
+ * @param timeSlot The time slot
+ * @returns true if the room is valid, false if it violates block-busting rules
+ */
+export function isRoomValidForBlockBusting(
+  room: Room,
+  course: Course,
+  timeSlot: TimeSlot
+): boolean {
+  const isBlockBustingCourse = isBlockBusting(timeSlot, course.duration);
+  const isBlockBustingRoomType =
+    room.type === RoomType.ROUSS_403 ||
+    room.type === RoomType.MONROE_120 ||
+    room.type === RoomType.PAVILION_VIII_BLOCKBUST;
+
+  // If course is block-busting, MUST use block-busting room
+  if (isBlockBustingCourse && !isBlockBustingRoomType) {
+    return false;
+  }
+
+  // If course is NOT block-busting, should NOT use block-busting room
+  // (Reserve them for actual block-busting courses)
+  if (!isBlockBustingCourse && isBlockBustingRoomType) {
+    return false;
+  }
+
+  return true;
 }

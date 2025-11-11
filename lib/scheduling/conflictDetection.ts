@@ -9,6 +9,7 @@ import {
   CourseLevel,
 } from '@/types/scheduling';
 import { doTimeSlotsOverlap, isTimeDuringBattenHour } from './timeSlots';
+import { isBlockBusting, getBlockBustingReason, isBlockBustingRoom } from '@/lib/utils/blockBusting';
 
 export function detectConflicts(
   sections: ScheduledSection[],
@@ -49,6 +50,9 @@ export function detectConflicts(
 
   // 11. Room capacity issues
   conflicts.push(...detectRoomCapacityIssues(sections));
+
+  // 12. Block-busting violations (classes outside standard scheduling blocks)
+  conflicts.push(...detectBlockBustingViolations(sections, courses));
 
   return conflicts;
 }
@@ -457,6 +461,56 @@ function detectRoomCapacityIssues(sections: ScheduledSection[]): Conflict[] {
         type: ConflictType.ROOM_UNDER_UTILIZED,
         severity: 'info',
         description: `Room is under-utilized (${enrollment} students in ${capacity}-seat room)`,
+        affectedSections: [section.id],
+      });
+    }
+  });
+
+  return conflicts;
+}
+
+/**
+ * Detect block-busting violations
+ *
+ * Block-busting = classes outside standard university scheduling blocks
+ * - MWF: must be 50 min and start before 3:00 PM
+ * - TR: must be 75 min and start before 2:30 PM
+ *
+ * Block-busting classes MUST use special rooms:
+ * - Rouss 403, Monroe 120, or Pavilion VIII (Block-Bust)
+ */
+function detectBlockBustingViolations(
+  sections: ScheduledSection[],
+  courses: Course[]
+): Conflict[] {
+  const conflicts: Conflict[] = [];
+
+  sections.forEach(section => {
+    const course = courses.find(c => c.id === section.courseId);
+    if (!course) return;
+
+    const isBlockBustingCourse = isBlockBusting(section.timeSlot, course.duration);
+    const hasBlockBustingRoom = isBlockBustingRoom(section.room.id);
+
+    // Case 1: Block-busting course NOT in block-busting room (ERROR)
+    if (isBlockBustingCourse && !hasBlockBustingRoom) {
+      const reason = getBlockBustingReason(section.timeSlot, course.duration);
+      conflicts.push({
+        id: `block-busting-violation-${section.id}`,
+        type: ConflictType.BLOCK_BUSTING_VIOLATION,
+        severity: 'error',
+        description: `Block-busting course must use Rouss 403, Monroe 120, or Pavilion VIII (Block-Bust). Reason: ${reason}. Currently in ${section.room.name}.`,
+        affectedSections: [section.id],
+      });
+    }
+
+    // Case 2: Standard course IN block-busting room (WARNING - room reservation issue)
+    if (!isBlockBustingCourse && hasBlockBustingRoom) {
+      conflicts.push({
+        id: `block-busting-room-misuse-${section.id}`,
+        type: ConflictType.BLOCK_BUSTING_ROOM_MISUSE,
+        severity: 'warning',
+        description: `Standard course should not use block-busting room ${section.room.name}. Reserve these rooms for block-busting classes.`,
         affectedSections: [section.id],
       });
     }
