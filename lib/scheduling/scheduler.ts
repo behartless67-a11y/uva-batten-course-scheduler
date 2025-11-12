@@ -25,7 +25,7 @@ export class CourseScheduler {
   private sections: ScheduledSection[] = [];
   private assignments: Map<string, { timeSlot: TimeSlot; room: Room }> = new Map();
   private backtrackStartTime: number = 0;
-  private readonly BACKTRACK_TIMEOUT_MS = 5000; // 5 second timeout
+  private readonly BACKTRACK_TIMEOUT_MS = 10000; // 10 second timeout
 
   constructor(config: SchedulerConfig, courses: Course[], faculty: Faculty[]) {
     this.config = config;
