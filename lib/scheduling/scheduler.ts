@@ -24,6 +24,8 @@ export class CourseScheduler {
   private faculty: Faculty[];
   private sections: ScheduledSection[] = [];
   private assignments: Map<string, { timeSlot: TimeSlot; room: Room }> = new Map();
+  private backtrackStartTime: number = 0;
+  private readonly BACKTRACK_TIMEOUT_MS = 5000; // 5 second timeout
 
   constructor(config: SchedulerConfig, courses: Course[], faculty: Faculty[]) {
     this.config = config;
@@ -42,12 +44,14 @@ export class CourseScheduler {
       // Step 2: Sort sections by constraint priority
       const sortedSections = this.prioritizeSections(sectionsToSchedule);
 
-      // Step 3: Attempt to schedule each section using backtracking
-      console.log('Starting backtracking scheduler...');
+      // Step 3: Attempt to schedule each section using backtracking with timeout
+      console.log(`Starting backtracking scheduler for ${sortedSections.length} sections...`);
+      this.backtrackStartTime = Date.now();
       const success = this.backtrackSchedule(sortedSections, 0);
 
       if (!success) {
-        console.log('Backtracking failed. Trying greedy approach...');
+        const elapsed = Date.now() - this.backtrackStartTime;
+        console.log(`Backtracking failed after ${elapsed}ms. Trying greedy approach...`);
         // Fallback to greedy scheduling
         this.sections = [];
         this.assignments.clear();
@@ -173,6 +177,12 @@ export class CourseScheduler {
     sections: Partial<ScheduledSection>[],
     index: number
   ): boolean {
+    // Check timeout to prevent infinite loops
+    if (Date.now() - this.backtrackStartTime > this.BACKTRACK_TIMEOUT_MS) {
+      console.log(`Backtracking timeout after ${this.BACKTRACK_TIMEOUT_MS}ms, falling back to greedy`);
+      return false;
+    }
+
     // Base case: all sections scheduled
     if (index >= sections.length) {
       return true;
