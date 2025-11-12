@@ -5,15 +5,12 @@ import { Calendar, Upload, FileSpreadsheet, AlertCircle, CheckCircle } from 'luc
 import FileUploadSection, { TemplateDownloadSection } from '@/components/scheduling/FileUploadSection';
 import ScheduleViewer from '@/components/scheduling/ScheduleViewer';
 import ConflictPanel from '@/components/scheduling/ConflictPanel';
-import { AssignmentWeightsConfig } from '@/components/scheduling/AssignmentWeightsConfig';
 import {
   Schedule,
   Faculty,
   Course,
   SchedulerConfig,
   Semester,
-  AssignmentWeights,
-  DEFAULT_ASSIGNMENT_WEIGHTS,
 } from '@/types/scheduling';
 import { CourseScheduler } from '@/lib/scheduling/scheduler';
 
@@ -33,13 +30,7 @@ export default function Home() {
     maxElectivesPerSlot: 2,
     preferMixedElectives: true,
     avoidThursdayDiscussionsAfter5pm: true,
-    balanceWorkload: true,
-    assignmentWeights: DEFAULT_ASSIGNMENT_WEIGHTS,
   });
-
-  const handleWeightsChange = (newWeights: AssignmentWeights) => {
-    setConfig({ ...config, assignmentWeights: newWeights });
-  };
 
   const handleFilesUploaded = (uploadedFaculty: Faculty[], uploadedCourses: Course[]) => {
     setFaculty(uploadedFaculty);
@@ -254,15 +245,6 @@ export default function Home() {
                   </p>
                 </div>
               </div>
-            </div>
-
-            {/* Assignment Weights Configuration */}
-            <div className="mb-6">
-              <AssignmentWeightsConfig
-                weights={config.assignmentWeights || DEFAULT_ASSIGNMENT_WEIGHTS}
-                onChange={handleWeightsChange}
-                disabled={loading}
-              />
             </div>
 
             <div className="flex gap-4">

@@ -107,185 +107,31 @@ export class CourseScheduler {
 
   /**
    * Create individual sections from course definitions
-   * Uses AI-powered workload balancing when balance workload is enabled
+   * Faculty are pre-assigned in the CSV upload (no workload balancing needed)
    */
   private createSectionsFromCourses(): Partial<ScheduledSection>[] {
     const sections: Partial<ScheduledSection>[] = [];
-    const facultyWorkload = new Map<string, number>(); // Track assignments per faculty
-
-    // Initialize workload tracker
-    this.faculty.forEach(f => facultyWorkload.set(f.id, 0));
 
     this.courses.forEach(course => {
       // Create sections for lectures
       for (let i = 0; i < course.numberOfSections; i++) {
-        let assignedFacultyId = course.facultyId;
-
-        // AI-powered workload balancing
-        if (this.config.balanceWorkload && course.facultyId) {
-          assignedFacultyId = this.selectBestFaculty(course, facultyWorkload);
-        }
-
         sections.push({
           id: `${course.id}-section-${i + 1}`,
           courseId: course.id,
           sectionNumber: i + 1,
-          facultyId: assignedFacultyId,
+          facultyId: course.facultyId, // Use pre-assigned faculty from CSV
           enrollmentCap: Math.ceil(course.enrollmentCap / course.numberOfSections),
           actualEnrollment: course.actualEnrollment
             ? Math.ceil(course.actualEnrollment / course.numberOfSections)
             : undefined,
           conflicts: [],
         });
-
-        // Update workload tracker
-        if (assignedFacultyId) {
-          facultyWorkload.set(assignedFacultyId, (facultyWorkload.get(assignedFacultyId) || 0) + 1);
-        }
       }
 
       // TODO: Discussion sections can be added here if needed
     });
 
     return sections;
-  }
-
-  /**
-   * Select best faculty for a course using multi-factor weighted scoring
-   * Balances equity with preferences, expertise, and efficiency
-   * Returns the original faculty ID or a better alternative
-   */
-  private selectBestFaculty(course: Course, currentWorkload: Map<string, number>): string {
-    const originalFaculty = this.faculty.find(f => f.id === course.facultyId);
-    if (!originalFaculty) return course.facultyId;
-
-    // Get weights (use configured or defaults)
-    const weights = this.config.assignmentWeights || {
-      workloadEquity: 0.35,
-      facultyPreference: 0.25,
-      courseTypeMatch: 0.15,
-      historicalConsistency: 0.10,
-      timeEfficiency: 0.10,
-      roomProximity: 0.05,
-    };
-
-    // Find all faculty who could teach this course
-    const eligibleFaculty = this.faculty.filter(f => {
-      // Must have capacity (don't overload)
-      const workload = currentWorkload.get(f.id) || 0;
-      if (workload >= 4) return false; // Hard cap at 4 courses
-
-      return true;
-    });
-
-    if (eligibleFaculty.length === 0) return course.facultyId;
-
-    // Score each eligible faculty member using weighted multi-factor scoring
-    const scoredFaculty = eligibleFaculty.map(f => {
-      const scores = {
-        workloadEquity: this.calculateWorkloadEquityScore(f.id, currentWorkload),
-        facultyPreference: this.calculateFacultyPreferenceScore(f, course),
-        courseTypeMatch: this.calculateCourseTypeMatchScore(f, course),
-        historicalConsistency: this.calculateHistoricalConsistencyScore(f.id, course),
-        timeEfficiency: this.calculateTimeEfficiencyScore(f.id, currentWorkload),
-        roomProximity: this.calculateRoomProximityScore(f.id),
-      };
-
-      // Calculate weighted total score
-      const totalScore =
-        scores.workloadEquity * weights.workloadEquity +
-        scores.facultyPreference * weights.facultyPreference +
-        scores.courseTypeMatch * weights.courseTypeMatch +
-        scores.historicalConsistency * weights.historicalConsistency +
-        scores.timeEfficiency * weights.timeEfficiency +
-        scores.roomProximity * weights.roomProximity;
-
-      return {
-        faculty: f,
-        score: totalScore,
-        breakdown: scores, // For transparency
-      };
-    });
-
-    // Sort by score (highest first)
-    scoredFaculty.sort((a, b) => b.score - a.score);
-
-    // Return best faculty
-    return scoredFaculty[0].faculty.id;
-  }
-
-  /**
-   * Calculate workload equity score (0-100)
-   * Higher score = more equitable assignment
-   * CRITICAL: Ensures every faculty member teaches at least one course
-   */
-  private calculateWorkloadEquityScore(facultyId: string, workload: Map<string, number>): number {
-    const currentLoad = workload.get(facultyId) || 0;
-
-    // MASSIVE preference for unassigned faculty to ensure everyone teaches at least 1 course
-    // With workloadEquity weight of 0.35, a score of 150 gives 52.5 points
-    // This is enough to overcome all other factors (max ~47.5 points)
-    if (currentLoad === 0) return 150; // STRONGLY prefer unassigned faculty
-    if (currentLoad === 1) return 80;
-    if (currentLoad === 2) return 60;
-    if (currentLoad === 3) return 35;
-    return 10; // 4+ courses heavily discouraged
-  }
-
-  /**
-   * Calculate faculty preference score (0-100)
-   * Checks if course matches faculty's preferred teaching patterns
-   */
-  private calculateFacultyPreferenceScore(faculty: Faculty, course: Course): number {
-    // Placeholder: In production, check faculty preferences
-    // For now, check if they're the original assigned faculty
-    if (faculty.id === course.facultyId) return 100; // Original assignment
-    return 50; // Neutral if not original
-  }
-
-  /**
-   * Calculate course type match score (0-100)
-   * Matches faculty expertise to course type (Core, Elective, etc.)
-   */
-  private calculateCourseTypeMatchScore(faculty: Faculty, course: Course): number {
-    // Placeholder: In production, track faculty expertise by course type
-    // For now, give bonus to original assignment
-    if (faculty.id === course.facultyId) return 80;
-    return 50; // Neutral
-  }
-
-  /**
-   * Calculate historical consistency score (0-100)
-   * Rewards keeping assignments consistent with past semesters
-   */
-  private calculateHistoricalConsistencyScore(facultyId: string, course: Course): number {
-    // Placeholder: In production, query historical assignment database
-    // For now, prefer original CSV assignment
-    if (facultyId === course.facultyId) return 100;
-    return 50; // Neutral
-  }
-
-  /**
-   * Calculate time efficiency score (0-100)
-   * Prefers assignments that minimize schedule gaps for faculty
-   */
-  private calculateTimeEfficiencyScore(facultyId: string, workload: Map<string, number>): number {
-    // Placeholder: In production, analyze faculty's existing schedule for gaps
-    // For now, slight preference for faculty with existing courses (clustering)
-    const currentLoad = workload.get(facultyId) || 0;
-    if (currentLoad === 1 || currentLoad === 2) return 70; // Good clustering
-    if (currentLoad === 0) return 60; // Neutral
-    return 50; // Multiple courses may have gaps
-  }
-
-  /**
-   * Calculate room proximity score (0-100)
-   * Prefers assignments that minimize room changes for faculty
-   */
-  private calculateRoomProximityScore(facultyId: string): number {
-    // Placeholder: In production, track assigned rooms and calculate proximity
-    // For now, return neutral score
-    return 50;
   }
 
   /**

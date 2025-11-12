@@ -14,10 +14,8 @@
 4. [Time Slot Allocation Rules](#time-slot-allocation-rules)
 5. [Room Assignment Rules](#room-assignment-rules)
 6. [Student Cohort Considerations](#student-cohort-considerations)
-7. [Workload Balancing Criteria](#workload-balancing-criteria)
-8. [Conflict Resolution Priorities](#conflict-resolution-priorities)
-9. [Course-Specific Rules](#course-specific-rules)
-10. [Multi-Factor Weighted Scoring System](#multi-factor-weighted-scoring-system)
+7. [Conflict Resolution Priorities](#conflict-resolution-priorities)
+8. [Course-Specific Rules](#course-specific-rules)
 
 ---
 
@@ -341,134 +339,21 @@ These constraints should be satisfied when possible, but can be relaxed if neces
 
 ## Faculty Assignment Rules
 
-### 1. Multi-Factor Weighted Scoring System (v2.1+)
+### Pre-Assigned Faculty (v2.2+)
 
-**Objective:** Balance multiple competing priorities in faculty assignment
+**Important Change:** Faculty are now **pre-assigned to courses in the CSV upload**. The scheduler no longer performs workload balancing or faculty assignment.
 
-**Scoring Factors:**
+**How It Works:**
+- Each course row in the CSV includes the faculty member's name
+- The scheduler respects this pre-assignment and focuses on:
+  - Finding optimal time slots based on faculty preferences
+  - Assigning appropriate rooms based on enrollment and availability
+  - Avoiding conflicts with faculty hard constraints (cannot teach days, parenting schedules)
+  - Spreading out certain courses per Heather's specifications (LPPP 7750, etc.)
 
-| Factor | Default Weight | Range | Purpose |
-|--------|----------------|-------|---------|
-| Workload Equity | 35% | 0-150 | Ensure fair distribution |
-| Faculty Preference | 25% | 0-100 | Respect faculty preferences |
-| Course Type Match | 15% | 0-100 | Match expertise to course type |
-| Historical Consistency | 10% | 0-100 | Maintain semester-to-semester consistency |
-| Time Efficiency | 10% | 0-100 | Minimize schedule gaps |
-| Room Proximity | 5% | 0-100 | Minimize room changes |
-
-**Total Score Calculation:**
-```
-Final Score = (workloadEquity × 0.35) +
-              (facultyPreference × 0.25) +
-              (courseTypeMatch × 0.15) +
-              (historicalConsistency × 0.10) +
-              (timeEfficiency × 0.10) +
-              (roomProximity × 0.05)
-```
-
-**Customization:** Weights can be adjusted via the Assignment Weights Configuration panel in the UI
-
----
-
-### 2. Workload Equity Scoring (CRITICAL)
-
-**Purpose:** Ensure every faculty member teaches at least one course before anyone teaches multiple courses
-
-**Scoring Table:**
-
-| Current Workload | Score | Weighted (35%) | Notes |
-|------------------|-------|----------------|-------|
-| 0 courses        | **150** | **52.5** | MASSIVE bonus - ensures everyone teaches |
-| 1 course         | 80 | 28.0 | Preferred |
-| 2 courses        | 60 | 21.0 | Acceptable |
-| 3 courses        | 35 | 12.25 | Discouraged |
-| 4+ courses       | 10 | 3.5 | Heavily discouraged |
-
-**Key Insight:**
-- 0-course faculty: 52.5 pts from workload equity
-- 1-course faculty (even if original assignment): max 28.0 + 25 + 19.5 = 72.5 pts
-- 0-course faculty (not original): 52.5 + 12.5 + 20 = 85 pts
-
-**Result:** 0-course faculty ALWAYS wins, ensuring equitable distribution
-
----
-
-### 3. Faculty Preference Scoring
-
-**Purpose:** Respect faculty preferences and original CSV assignments
-
-**Scoring:**
-- Original CSV assignment: **100 points**
-- Other faculty: **50 points** (neutral)
-
-**Future Enhancements:**
-- Check preferred teaching days (bonus for matches)
-- Check course type preferences
-- Check time of day preferences
-
----
-
-### 4. Course Type Match Scoring
-
-**Purpose:** Match faculty expertise to course type (Core, Elective, Capstone)
-
-**Current Implementation:**
-- Original CSV assignment: **80 points**
-- Other faculty: **50 points** (neutral)
-
-**Future Enhancements:**
-- Track faculty expertise by course type
-- Bonus for faculty who have taught this type before
-- Penalty for mismatches (e.g., research faculty teaching intro courses)
-
-**Notes for Heather:** Add faculty expertise data here
-
----
-
-### 5. Historical Consistency Scoring
-
-**Purpose:** Maintain consistency with past semester assignments
-
-**Current Implementation:**
-- Original CSV assignment: **100 points**
-- Other faculty: **50 points** (neutral)
-
-**Future Enhancements:**
-- Query historical assignment database
-- Bonus for faculty who taught this specific course before
-- Track multi-semester patterns
-
-**Notes for Heather:** Would you like us to build a historical assignment database?
-
----
-
-### 6. Time Efficiency Scoring
-
-**Purpose:** Minimize schedule gaps for faculty (cluster courses together)
-
-**Current Implementation:**
-- Faculty with 1-2 courses: **70 points** (good clustering potential)
-- Faculty with 0 courses: **60 points** (neutral)
-- Faculty with 3+ courses: **50 points** (likely to have gaps)
-
-**Future Enhancements:**
-- Analyze faculty's actual schedule for time gaps
-- Bonus for assignments that fill gaps
-- Penalty for assignments that create new gaps
-
----
-
-### 7. Room Proximity Scoring
-
-**Purpose:** Minimize room changes for faculty between courses
-
-**Current Implementation:**
-- All faculty: **50 points** (neutral - not yet implemented)
-
-**Future Enhancements:**
-- Track assigned rooms for each faculty member
-- Bonus for assignments in same building
-- Penalty for assignments in distant buildings
+**Rationale:**
+- Judy and team manually assign faculty to courses based on expertise, workload, and department needs
+- Scheduler focuses on time/room optimization, not faculty assignment
 
 ---
 
@@ -632,75 +517,14 @@ Final Score = (workloadEquity × 0.35) +
 
 ---
 
-## Workload Balancing Criteria
+## ~~Workload Balancing Criteria~~ (REMOVED in v2.2)
 
-### 1. Course Count Balancing (Current Implementation)
+**Note:** Workload balancing has been removed as faculty are pre-assigned to courses in the CSV upload.
 
-**Metric:** Number of courses assigned to each faculty member
-
-**Target:** Everyone teaches at least 1 course; most faculty have 1-3 courses
-
-**Algorithm:** Multi-factor weighted scoring with massive bonus for 0-course faculty
-
-**Status:** ✅ Implemented in v2.1
-
----
-
-### 2. Teaching Hours Balancing (Future Enhancement)
-
-**Metric:** Total weekly teaching hours (not just course count)
-
-**Rationale:**
-- A 150-minute course (2.5 hours) is heavier than an 80-minute course (1.3 hours)
-- Faculty with 3 short courses ≠ faculty with 3 long courses
-
-**Proposed Calculation:**
-```
-Teaching Load = Σ (course_duration × sessions_per_week / 60)
-```
-
-**Example:**
-- Faculty A: 2 courses × 80min × 2 sessions/week = 5.3 hours/week
-- Faculty B: 2 courses × 150min × 1 session/week = 5.0 hours/week
-- Roughly equivalent workload despite same course count
-
-**Status:** Not yet implemented - needs discussion
-
-**Notes for Heather:** Should we weight by hours or stick with course count?
-
----
-
-### 3. Multi-Semester Balancing (Future Enhancement)
-
-**Concept:** Balance workload across Fall and Spring semesters
-
-**Example:**
-- Faculty teaches 3 courses in Fall → Assign only 1-2 in Spring
-- Faculty teaches 1 course in Fall → Can teach 2-3 in Spring
-
-**Requirements:**
-- Need to track Fall semester assignments
-- Import/export semester workload data
-- Adjust scoring based on previous semester
-
-**Status:** Under consideration
-
----
-
-### 4. Course Type Distribution
-
-**Concept:** Balance Core vs. Elective vs. Capstone assignments
-
-**Considerations:**
-- Core courses: Higher workload (more students, more grading)
-- Electives: Medium workload (smaller classes)
-- Capstones: High time commitment (intensive student interaction)
-
-**Proposed Rule:** Faculty teaching a capstone should have lighter load in other courses
-
-**Status:** Not yet implemented
-
-**Notes for Heather:** What's the relative workload difference between course types?
+Judy and the team handle workload distribution manually before uploading data to the scheduler. The tool now focuses exclusively on:
+- Time slot optimization
+- Room assignment
+- Conflict detection and avoidance
 
 ---
 
