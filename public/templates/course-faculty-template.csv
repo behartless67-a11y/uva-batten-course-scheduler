@@ -1,15 +1,22 @@
 code,name,type,faculty,facultyEmail,facultyPreferredDays,facultyCannotTeachDays,shareParentingWith,enrollmentCap,numberOfSections,numberOfDiscussions,duration,sessionsPerWeek,targetPrograms,notes
-LPPA 7110,Economics 2,Core,Jay Shimshack,jay@batten.virginia.edu,"Monday,Wednesday",,,109,2,4,80,2,"MPP Year 1","Two lectures with discussion sections"
-LPPA 7160,Research Methods and Data Analytics 2,Core,Sebastian Tello-Trillo,sebastian@batten.virginia.edu,"Tuesday,Thursday",Friday,,109,2,4,80,2,"MPP Year 1","Two lectures with discussion sections"
-LPPA 6250,Introduction to Policy Analysis,Core,Dan Player,dan@batten.virginia.edu,"Monday,Wednesday,Friday",,,"87",2,4,80,2,"MPP Year 1, Cert","Morning and afternoon sections for athletes"
-LPPA 6050,Leadership in the Public Arena,Core,Andy Pennock,andy@batten.virginia.edu,"Tuesday,Thursday",,,89,2,14,75,2,"MPP Year 1, MPP Year 2","Discussion sections on same day as lecture"
-LPPP 7750,Advanced Policy Project 2,Capstone,Andy Pennock,andy@batten.virginia.edu,"Tuesday,Thursday",,,90,6,0,150,1,"MPP Year 2","2.5hr sessions, one on Friday 9:30-12"
-LPPL 3210,Behavioral Science for Civic Leadership,Core,Eileen Chou,eileen@batten.virginia.edu,"Monday,Wednesday",,Noah Myung,162,2,0,150,1,"BA Year 3, Minor Year 4","2.5hr lectures at 3:30-6pm"
-LPPP 2200,Introduction to Public Policy,Core,Peter Johannessen,peter@batten.virginia.edu,"Monday,Tuesday,Wednesday,Thursday",Friday,,240,1,12,80,2,"BA Year 2","Large lecture with 12 discussion sections"
-LPPP 3230,Public Policy Challenges,Core,Craig Volden,craig@batten.virginia.edu,"Tuesday,Thursday",,,226,1,10,80,2,"BA Year 1, Minor","One lecture with 8-10 discussion sections"
-LPPA 3650,Economics of Public Policy,Core,Andrew Simon,andrew@batten.virginia.edu,"Monday,Wednesday",,,166,2,6,80,2,"BA Year 3","Two lectures with discussion sections"
-LPPL 4680,Lead From Anywhere,Core,Gelsdorf,gelsdorf@batten.virginia.edu,Wednesday,,,125,2,0,150,1,"BA Year 4","Wednesday 9:30-12 and 2:00-4:30, CSC room"
-LPPS 5310,Program Evaluation,Elective,Faculty A,facultya@batten.virginia.edu,"Monday,Wednesday",,,30,1,0,80,2,"Graduate","Standard graduate elective"
-LPPS 5320,Cost-Benefit Analysis,Elective,Faculty B,facultyb@batten.virginia.edu,"Tuesday,Thursday",,,30,1,0,80,2,"Graduate","Standard graduate elective"
-LPPP 3100,American Politics and Policy,Elective,Faculty C,facultyc@batten.virginia.edu,"Monday,Wednesday,Friday",,,30,1,0,80,2,"Undergraduate","Standard undergraduate elective"
-LPPP 4200,Policy Analysis Seminar,Capstone,Faculty D,facultyd@batten.virginia.edu,"Tuesday,Thursday",,,18,1,0,150,1,"Undergraduate","Small capstone course"
+LPPA 7110,Economics 2,Core,Jay Shimshack,jay@batten.virginia.edu,"Monday,Wednesday",,,60,1,0,80,2,MPP1,Monroe 120 preferred
+LPPA 7160,Research Methods and Data Analytics 2,Core,Sebastian Tello-Trillo,sebastian@batten.virginia.edu,"Tuesday,Thursday",Friday,,60,1,0,80,2,MPP1,Monroe 120 preferred
+LPPA 6250,Introduction to Policy Analysis,Core,Dan Player,dan@batten.virginia.edu,"Monday,Wednesday",,,"50",1,0,80,2,MPP2,Morning preferred for athletes
+LPPL 6050,Leadership Seminar,Core,Andy Pennock,andy@batten.virginia.edu,"Tuesday,Thursday",,,60,1,2,75,2,MPP1,"Discussion sections 75min on Tue OR Thu"
+LPPL 2100,Public Policy and Law,Core,Kim Scheppele,kim@batten.virginia.edu,"Tuesday,Thursday",,,48,1,2,75,2,BA3,"Discussion sections 75min Thursday only"
+LPPP 7750,Advanced Policy Project,Capstone,Various Faculty,faculty@batten.virginia.edu,"Monday,Tuesday,Wednesday,Thursday,Friday",,,18,6,0,150,1,MPP2,"Spread across M-F, max 2 Friday morning"
+LPPL 3210,Behavioral Science for Civic Leadership,Core,Eileen Chou,eileen@batten.virginia.edu,"Monday,Wednesday",,Noah Myung,48,1,0,150,1,BA3,"2.5hr lecture 3:30-6pm"
+LPPP 2200,Introduction to Public Policy,Core,Peter Johannessen,peter@batten.virginia.edu,"Monday,Tuesday,Wednesday,Thursday",Friday,,60,1,8,80,2,BA3,"One lecture with discussions"
+LPPP 3230,Public Policy Challenges,Core,Craig Volden,craig@batten.virginia.edu,"Tuesday,Thursday",,,60,1,6,80,2,"BA3,BA4","One lecture with discussions"
+LPPA 3650,Economics of Public Policy,Core,Andrew Simon,andrew@batten.virginia.edu,"Monday,Wednesday",,,48,1,4,80,2,BA4,Rouss Hall acceptable
+LPPL 4680,Leadership Capstone,Capstone,Gelsdorf,gelsdorf@batten.virginia.edu,Wednesday,,,18,2,0,150,1,BA4,"Wed 9:30-12 and 2:00-4:30"
+LPPS 5310,Program Evaluation,Elective,Sarah Hamersma,sarah@batten.virginia.edu,"Monday,Wednesday",,,30,1,0,80,2,"G/U Electives","5000-level elective"
+LPPS 5320,Cost-Benefit Analysis,Elective,Bryce Ward,bryce@batten.virginia.edu,"Tuesday,Thursday",,,30,1,0,80,2,"G/U Electives","5000-level elective"
+LPPS 5410,Urban Policy,Elective,David Hughes,david@batten.virginia.edu,"Monday,Wednesday",,,25,1,0,80,2,"G/U Electives","Not during Batten Hour"
+LPPP 3100,American Politics and Policy,Elective,Jennifer Victor,jennifer@batten.virginia.edu,"Tuesday,Thursday",,,30,1,0,80,2,"G/U Electives",Avoid Friday
+LPPP 4200,Policy Analysis Workshop,Capstone,Noah Myung,noah@batten.virginia.edu,"Tuesday,Thursday",,Eileen Chou,18,1,0,150,1,BA4,"Small capstone, Pavilion VIII ok"
+LPPA 6100,Statistics for Policy Analysis,Core,Tami Kim,tami@batten.virginia.edu,"Monday,Wednesday",,,60,1,0,80,2,MPP1,Monroe 120 preferred
+LPPL 6200,Policy Writing,Core,Ruth Serven Smith,ruth@batten.virginia.edu,"Tuesday,Thursday",,,48,2,0,75,2,MPP1,"Two sections, small class size"
+LPPS 5100,Public Finance,Elective,William Shobe,william@batten.virginia.edu,"Monday,Wednesday",,,28,1,0,80,2,"G/U Electives",Morning preferred
+LPPA 7050,Microeconomics for Policy,Core,David Evans,david@batten.virginia.edu,"Tuesday,Thursday",,,60,1,0,80,2,Accel1,"Accelerated MPP Year 1"
+LPPA 7120,Applied Econometrics,Core,Luke Keele,luke@batten.virginia.edu,"Monday,Wednesday",,,60,1,0,80,2,Accel2,"Accelerated MPP Year 2"
