@@ -2,10 +2,14 @@
 
 import { useState } from 'react';
 import { Schedule, Course, Faculty, DayOfWeek, ScheduledSection, TimeSlot, StudentCohort } from '@/types/scheduling';
-import { Download, Grid, List, Search, Wand2, ChevronDown, ChevronUp, User } from 'lucide-react';
+import { Download, Grid, List, Search, Wand2, ChevronDown, ChevronUp, User, Save, FolderOpen } from 'lucide-react';
 import { exportScheduleToExcel, exportConflictsToExcel } from '@/lib/utils/fileParser';
 import { formatTimeRange12Hour } from '@/lib/utils/timeFormat';
 import ConflictResolutionWizard, { ConflictResolution } from './ConflictResolutionWizard';
+import SaveScheduleDialog from './SaveScheduleDialog';
+import VersionsListPanel from './VersionsListPanel';
+import AutoSaveIndicator from './AutoSaveIndicator';
+import { useAutoSave } from '@/lib/hooks/useAutoSave';
 import { TIME_SLOTS } from '@/lib/scheduling/timeSlots';
 
 /**
@@ -98,6 +102,18 @@ export default function ScheduleViewer({ schedule, courses, faculty }: ScheduleV
   const [dragOverTimeSlot, setDragOverTimeSlot] = useState<{day: DayOfWeek, timeSlot: string} | null>(null);
   const [showWizard, setShowWizard] = useState(false);
   const [showFacultySummary, setShowFacultySummary] = useState(true);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showVersionsPanel, setShowVersionsPanel] = useState(false);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
+
+  // Auto-save hook
+  const { lastSaved, isSaving, saveNow } = useAutoSave({
+    schedule: localSchedule,
+    courses,
+    faculty,
+    enabled: autoSaveEnabled,
+    intervalMinutes: 5, // Auto-save every 5 minutes per requirements
+  });
 
   const courseMap = new Map(courses.map(c => [c.id, c]));
   const facultyMap = new Map(faculty.map(f => [f.id, f]));
@@ -350,12 +366,33 @@ export default function ScheduleViewer({ schedule, courses, faculty }: ScheduleV
     exportConflictsToExcel(localSchedule.conflicts, `${localSchedule.name}-conflicts.xlsx`);
   };
 
+  const handleLoadVersion = (
+    loadedSchedule: Schedule,
+    loadedCourses: Course[],
+    loadedFaculty: Faculty[],
+    versionId: string
+  ) => {
+    setLocalSchedule(loadedSchedule);
+    alert(`Loaded version "${loadedSchedule.name}" successfully!`);
+  };
+
+  const handleExportVersion = (versionId: string) => {
+    // Export functionality is handled in VersionsListPanel
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md w-full">
       {/* Toolbar */}
       <div className="px-6 py-4 border-b border-gray-200">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
+            {/* Auto-save indicator */}
+            <AutoSaveIndicator
+              lastSaved={lastSaved}
+              isSaving={isSaving}
+              enabled={autoSaveEnabled}
+              onToggle={() => setAutoSaveEnabled(!autoSaveEnabled)}
+            />
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -404,6 +441,23 @@ export default function ScheduleViewer({ schedule, courses, faculty }: ScheduleV
                 <List className="w-4 h-4" />
               </button>
             </div>
+
+            {/* Schedule Versioning Buttons */}
+            <button
+              onClick={() => setShowSaveDialog(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <Save className="w-4 h-4" />
+              <span className="text-sm font-medium">Save Version</span>
+            </button>
+
+            <button
+              onClick={() => setShowVersionsPanel(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <FolderOpen className="w-4 h-4" />
+              <span className="text-sm font-medium">Versions</span>
+            </button>
 
             {/* Export Buttons */}
             <button
@@ -655,6 +709,25 @@ export default function ScheduleViewer({ schedule, courses, faculty }: ScheduleV
           onClose={() => setShowWizard(false)}
         />
       )}
+
+      {/* Schedule Versioning Dialogs */}
+      <SaveScheduleDialog
+        isOpen={showSaveDialog}
+        onClose={() => setShowSaveDialog(false)}
+        schedule={localSchedule}
+        courses={courses}
+        faculty={faculty}
+        onSaved={() => {
+          alert('Schedule version saved successfully!');
+        }}
+      />
+
+      <VersionsListPanel
+        isOpen={showVersionsPanel}
+        onClose={() => setShowVersionsPanel(false)}
+        onLoadVersion={handleLoadVersion}
+        onExportVersion={handleExportVersion}
+      />
     </div>
   );
 }
