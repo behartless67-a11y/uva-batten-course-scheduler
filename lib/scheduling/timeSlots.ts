@@ -125,7 +125,167 @@ export const TIME_SLOTS: TimeSlot[] = [
   },
 ];
 
-// Batten Hour constraint
+// Discussion section time slots (75 minutes, single day)
+// Used for courses like LPPL 2100 (Thursday only) and LPPL 6050 (any day)
+export const DISCUSSION_TIME_SLOTS: TimeSlot[] = [
+  // Thursday discussion slots for LPPL 2100
+  {
+    id: 'thu-930-1045',
+    startTime: '09:30',
+    endTime: '10:45',
+    days: [DayOfWeek.THURSDAY],
+  },
+  {
+    id: 'thu-1100-1215',
+    startTime: '11:00',
+    endTime: '12:15',
+    days: [DayOfWeek.THURSDAY],
+  },
+  {
+    id: 'thu-1230-145',
+    startTime: '12:30',
+    endTime: '13:45',
+    days: [DayOfWeek.THURSDAY],
+  },
+  {
+    id: 'thu-200-315',
+    startTime: '14:00',
+    endTime: '15:15',
+    days: [DayOfWeek.THURSDAY],
+  },
+  {
+    id: 'thu-330-445',
+    startTime: '15:30',
+    endTime: '16:45',
+    days: [DayOfWeek.THURSDAY],
+  },
+  {
+    id: 'thu-500-615',
+    startTime: '17:00',
+    endTime: '18:15',
+    days: [DayOfWeek.THURSDAY],
+  },
+  {
+    id: 'thu-630-745',
+    startTime: '18:30',
+    endTime: '19:45',
+    days: [DayOfWeek.THURSDAY],
+  },
+  // Tuesday discussion slots for LPPL 6050
+  {
+    id: 'tue-930-1045',
+    startTime: '09:30',
+    endTime: '10:45',
+    days: [DayOfWeek.TUESDAY],
+  },
+  {
+    id: 'tue-1100-1215',
+    startTime: '11:00',
+    endTime: '12:15',
+    days: [DayOfWeek.TUESDAY],
+  },
+  {
+    id: 'tue-1230-145',
+    startTime: '12:30',
+    endTime: '13:45',
+    days: [DayOfWeek.TUESDAY],
+  },
+  {
+    id: 'tue-200-315',
+    startTime: '14:00',
+    endTime: '15:15',
+    days: [DayOfWeek.TUESDAY],
+  },
+  {
+    id: 'tue-330-445',
+    startTime: '15:30',
+    endTime: '16:45',
+    days: [DayOfWeek.TUESDAY],
+  },
+  {
+    id: 'tue-500-615',
+    startTime: '17:00',
+    endTime: '18:15',
+    days: [DayOfWeek.TUESDAY],
+  },
+  {
+    id: 'tue-630-745',
+    startTime: '18:30',
+    endTime: '19:45',
+    days: [DayOfWeek.TUESDAY],
+  },
+  // Monday discussion slots
+  {
+    id: 'mon-930-1045',
+    startTime: '09:30',
+    endTime: '10:45',
+    days: [DayOfWeek.MONDAY],
+  },
+  {
+    id: 'mon-1100-1215',
+    startTime: '11:00',
+    endTime: '12:15',
+    days: [DayOfWeek.MONDAY],
+  },
+  {
+    id: 'mon-200-315',
+    startTime: '14:00',
+    endTime: '15:15',
+    days: [DayOfWeek.MONDAY],
+  },
+  {
+    id: 'mon-330-445',
+    startTime: '15:30',
+    endTime: '16:45',
+    days: [DayOfWeek.MONDAY],
+  },
+  // Wednesday discussion slots
+  {
+    id: 'wed-930-1045',
+    startTime: '09:30',
+    endTime: '10:45',
+    days: [DayOfWeek.WEDNESDAY],
+  },
+  {
+    id: 'wed-1100-1215',
+    startTime: '11:00',
+    endTime: '12:15',
+    days: [DayOfWeek.WEDNESDAY],
+  },
+  {
+    id: 'wed-200-315',
+    startTime: '14:00',
+    endTime: '15:15',
+    days: [DayOfWeek.WEDNESDAY],
+  },
+  {
+    id: 'wed-330-445',
+    startTime: '15:30',
+    endTime: '16:45',
+    days: [DayOfWeek.WEDNESDAY],
+  },
+  // Friday discussion slots
+  {
+    id: 'fri-930-1045',
+    startTime: '09:30',
+    endTime: '10:45',
+    days: [DayOfWeek.FRIDAY],
+  },
+  {
+    id: 'fri-1100-1215',
+    startTime: '11:00',
+    endTime: '12:15',
+    days: [DayOfWeek.FRIDAY],
+  },
+  {
+    id: 'fri-200-315',
+    startTime: '14:00',
+    endTime: '15:15',
+    days: [DayOfWeek.FRIDAY],
+  },
+];
+
+// Batten Hour constraint (12:30-1:30 for core courses)
 export const BATTEN_HOUR = {
   day: DayOfWeek.MONDAY,
   startTime: '12:30',
@@ -191,6 +351,41 @@ export function findSuitableTimeSlots(
     // Filter by sessions per week
     if (slot.days.length !== sessionsPerWeek) return false;
 
+    return true;
+  });
+}
+
+/**
+ * Find suitable time slots for discussion sections
+ *
+ * @param daysConstraint - 'thursday-only' for LPPL 2100, 'any' for LPPL 6050, etc.
+ * @param duration - Discussion duration in minutes (typically 75)
+ * @returns Array of suitable time slots
+ */
+export function findDiscussionTimeSlots(
+  daysConstraint: 'thursday-only' | 'tuesday-thursday' | 'any',
+  duration: number = 75
+): TimeSlot[] {
+  return DISCUSSION_TIME_SLOTS.filter(slot => {
+    const slotDuration = getTimeSlotDuration(slot);
+
+    // Filter by duration (allow 10 minute tolerance)
+    if (Math.abs(slotDuration - duration) > 10) return false;
+
+    // Filter by day constraint
+    if (daysConstraint === 'thursday-only') {
+      return slot.days.includes(DayOfWeek.THURSDAY) && slot.days.length === 1;
+    }
+
+    if (daysConstraint === 'tuesday-thursday') {
+      // Can be on Tuesday OR Thursday (not both at once)
+      return (
+        (slot.days.includes(DayOfWeek.TUESDAY) || slot.days.includes(DayOfWeek.THURSDAY)) &&
+        slot.days.length === 1
+      );
+    }
+
+    // 'any' - allow all discussion slots
     return true;
   });
 }

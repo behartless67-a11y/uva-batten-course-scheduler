@@ -9,10 +9,12 @@ import { TimeSlot, DayOfWeek } from '@/types/scheduling';
  * - Monday/Wednesday/Friday: 50 minutes, starts before 3:00 PM
  * - Tuesday/Thursday: 75 minutes, starts before 2:30 PM
  *
- * Block-busting classes MUST use special rooms:
+ * Block-busting classes MUST use one of the 3 Batten rooms:
+ * - Monroe 120 (capacity: 68)
  * - Rouss 403 (capacity: 48)
- * - Monroe 120 (capacity: 60)
- * - Pavilion VIII Block-Bust (capacity: 18)
+ * - Pavilion VIII (capacity: 18)
+ *
+ * These same rooms are also used for standard (non-block-busting) courses.
  */
 
 /**
@@ -148,17 +150,18 @@ export function getBlockBustingReason(timeSlot: TimeSlot, courseDuration: number
 }
 
 /**
- * List of block-busting room IDs (must use these rooms for block-busting courses)
+ * List of Batten room IDs (must use these rooms for block-busting courses)
+ * These same rooms are also used for standard courses.
  */
-export const BLOCK_BUSTING_ROOM_IDS = [
+export const BATTEN_ROOM_IDS = [
+  'monroe-120',
   'rouss-403',
-  'monroe-120-blockbust',
-  'pavilion-viii-blockbust',
+  'pavilion-viii',
 ];
 
 /**
- * Check if a room is a block-busting room
+ * Check if a room is a Batten room (valid for block-busting)
  */
-export function isBlockBustingRoom(roomId: string): boolean {
-  return BLOCK_BUSTING_ROOM_IDS.includes(roomId);
+export function isBattenRoom(roomId: string): boolean {
+  return BATTEN_ROOM_IDS.includes(roomId);
 }

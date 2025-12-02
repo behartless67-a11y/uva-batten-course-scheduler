@@ -2,8 +2,8 @@ code,name,type,faculty,facultyEmail,facultyPreferredDays,facultyCannotTeachDays,
 LPPA 7110,Economics 2,Core,Jay Shimshack,jay@batten.virginia.edu,"Monday,Wednesday",,,60,1,0,80,2,MPP1,Monroe 120 preferred
 LPPA 7160,Research Methods and Data Analytics 2,Core,Sebastian Tello-Trillo,sebastian@batten.virginia.edu,"Tuesday,Thursday",Friday,,60,1,0,80,2,MPP1,Monroe 120 preferred
 LPPA 6250,Introduction to Policy Analysis,Core,Dan Player,dan@batten.virginia.edu,"Monday,Wednesday",,,"50",1,0,80,2,MPP2,Morning preferred for athletes
-LPPL 6050,Leadership Seminar,Core,Andy Pennock,andy@batten.virginia.edu,"Tuesday,Thursday",,,60,1,2,75,2,MPP1,"Discussion sections 75min on Tue OR Thu"
-LPPL 2100,Public Policy and Law,Core,Kim Scheppele,kim@batten.virginia.edu,"Tuesday,Thursday",,,48,1,2,75,2,BA3,"Discussion sections 75min Thursday only"
+LPPL 6050,Leadership Seminar,Core,Andy Pennock,andy@batten.virginia.edu,"Tuesday,Thursday",,,120,2,14,75,2,MPP1,"2 lectures (Tue+Thu 75min each), 14 discussions (7 per lecture), minimize overlap"
+LPPL 2100,Public Policy and Law,Core,Kim Scheppele,kim@batten.virginia.edu,"Monday,Wednesday",,,48,1,7,50,2,BA3,"1 lecture (Mon+Wed 50min), 7 discussions Thursday only 75min"
 LPPP 7750,Advanced Policy Project,Capstone,Various Faculty,faculty@batten.virginia.edu,"Monday,Tuesday,Wednesday,Thursday,Friday",,,18,6,0,150,1,MPP2,"Spread across M-F, max 2 Friday morning"
 LPPL 3210,Behavioral Science for Civic Leadership,Core,Eileen Chou,eileen@batten.virginia.edu,"Monday,Wednesday",,Noah Myung,48,1,0,150,1,BA3,"2.5hr lecture 3:30-6pm"
 LPPP 2200,Introduction to Public Policy,Core,Peter Johannessen,peter@batten.virginia.edu,"Monday,Tuesday,Wednesday,Thursday",Friday,,60,1,8,80,2,BA3,"One lecture with discussions"

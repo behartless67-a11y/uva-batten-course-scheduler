@@ -10,7 +10,7 @@ import {
   CourseType,
   Room,
 } from '@/types/scheduling';
-import { TIME_SLOTS, findSuitableTimeSlots, doTimeSlotsOverlap } from './timeSlots';
+import { TIME_SLOTS, DISCUSSION_TIME_SLOTS, findSuitableTimeSlots, findDiscussionTimeSlots, doTimeSlotsOverlap } from './timeSlots';
 import { suggestBestRoom } from './roomAssignment';
 import { detectConflicts } from './conflictDetection';
 
@@ -112,6 +112,10 @@ export class CourseScheduler {
   /**
    * Create individual sections from course definitions
    * Faculty are pre-assigned in the CSV upload (no workload balancing needed)
+   *
+   * Also creates discussion sections for courses that have them:
+   * - LPPL 6050: 14 discussions (7 per lecture section), any day, minimize overlap
+   * - LPPL 2100: 7 discussions, Thursday only, 75 minutes
    */
   private createSectionsFromCourses(): Partial<ScheduledSection>[] {
     const sections: Partial<ScheduledSection>[] = [];
@@ -132,10 +136,52 @@ export class CourseScheduler {
         });
       }
 
-      // TODO: Discussion sections can be added here if needed
+      // Create discussion sections if the course has them
+      if (course.numberOfDiscussions && course.numberOfDiscussions > 0) {
+        const discussionsPerLecture = Math.ceil(course.numberOfDiscussions / course.numberOfSections);
+        const studentsPerDiscussion = course.studentsPerDiscussion ||
+          Math.ceil(course.enrollmentCap / course.numberOfDiscussions);
+
+        for (let lectureIdx = 0; lectureIdx < course.numberOfSections; lectureIdx++) {
+          const discussionsForThisLecture = Math.min(
+            discussionsPerLecture,
+            course.numberOfDiscussions - (lectureIdx * discussionsPerLecture)
+          );
+
+          for (let discIdx = 0; discIdx < discussionsForThisLecture; discIdx++) {
+            const globalDiscIdx = (lectureIdx * discussionsPerLecture) + discIdx;
+            sections.push({
+              id: `${course.id}-discussion-${globalDiscIdx + 1}`,
+              courseId: course.id,
+              sectionNumber: globalDiscIdx + 1,
+              facultyId: course.facultyId, // Discussions tied to same faculty as lecture
+              enrollmentCap: studentsPerDiscussion,
+              conflicts: [],
+              // Mark this as a discussion section (we'll use id prefix to detect)
+            });
+          }
+        }
+      }
     });
 
     return sections;
+  }
+
+  /**
+   * Check if a section is a discussion section (vs lecture)
+   */
+  private isDiscussionSection(sectionId: string): boolean {
+    return sectionId.includes('-discussion-');
+  }
+
+  /**
+   * Get the parent lecture section number for a discussion
+   * For LPPL 6050: discussions 1-7 belong to lecture 1, discussions 8-14 belong to lecture 2
+   */
+  private getParentLectureNumber(course: Course, discussionNumber: number): number {
+    if (course.numberOfSections <= 1) return 1;
+    const discussionsPerLecture = Math.ceil((course.numberOfDiscussions || 0) / course.numberOfSections);
+    return Math.ceil(discussionNumber / discussionsPerLecture);
   }
 
   /**
@@ -237,14 +283,39 @@ export class CourseScheduler {
   }
 
   /**
-   * Get possible time slots for a course
+   * Get possible time slots for a course or discussion section
    */
   private getPossibleTimeSlots(course: Course, section: Partial<ScheduledSection>): TimeSlot[] {
-    let slots = findSuitableTimeSlots(
-      course.duration,
-      course.sessionsPerWeek,
-      this.config.allowFridayElectives
-    );
+    let slots: TimeSlot[];
+
+    // Check if this is a discussion section
+    if (this.isDiscussionSection(section.id || '')) {
+      // Get discussion-specific time slots based on course constraints
+      const daysConstraint = course.discussionDaysConstraint || 'any';
+      const discussionDuration = course.discussionDuration || 75;
+
+      // Map course constraint to findDiscussionTimeSlots format
+      let constraintType: 'thursday-only' | 'tuesday-thursday' | 'any';
+      if (daysConstraint === 'thursday-only') {
+        constraintType = 'thursday-only';
+      } else if (daysConstraint === 'tuesday-thursday') {
+        constraintType = 'tuesday-thursday';
+      } else {
+        constraintType = 'any';
+      }
+
+      slots = findDiscussionTimeSlots(constraintType, discussionDuration);
+
+      // For discussions, try to minimize overlap with other discussions of same course
+      slots = this.rankDiscussionSlotsByDistribution(slots, course, section);
+    } else {
+      // Regular lecture section
+      slots = findSuitableTimeSlots(
+        course.duration,
+        course.sessionsPerWeek,
+        this.config.allowFridayElectives
+      );
+    }
 
     // Apply faculty preferences (soft constraint - rank by preference)
     const facultyMember = this.faculty.find(f => f.id === course.facultyId);
@@ -265,9 +336,46 @@ export class CourseScheduler {
 
     // Anti-clustering: De-prioritize time slots that already have sections of this course
     // This helps spread sections across different times for student flexibility
-    slots = this.rankSlotsByDistribution(slots, course);
+    if (!this.isDiscussionSection(section.id || '')) {
+      slots = this.rankSlotsByDistribution(slots, course);
+    }
 
     return slots;
+  }
+
+  /**
+   * Rank discussion slots to minimize overlap between discussions of the same course
+   * Prioritizes slots that don't overlap with already-scheduled discussions
+   */
+  private rankDiscussionSlotsByDistribution(
+    slots: TimeSlot[],
+    course: Course,
+    currentSection: Partial<ScheduledSection>
+  ): TimeSlot[] {
+    // Get already scheduled discussion sections for this course
+    const scheduledDiscussions = this.sections.filter(
+      s => s.courseId === course.id && this.isDiscussionSection(s.id)
+    );
+
+    if (scheduledDiscussions.length === 0) {
+      return slots; // No existing discussions, return as-is
+    }
+
+    // Score each slot by overlap count (lower is better)
+    const scoredSlots = slots.map(slot => {
+      let overlapCount = 0;
+      scheduledDiscussions.forEach(disc => {
+        if (doTimeSlotsOverlap(slot, disc.timeSlot)) {
+          overlapCount++;
+        }
+      });
+      return { slot, overlapCount };
+    });
+
+    // Sort by overlap count (minimize overlap)
+    scoredSlots.sort((a, b) => a.overlapCount - b.overlapCount);
+
+    return scoredSlots.map(s => s.slot);
   }
 
   /**

@@ -9,7 +9,7 @@ import {
   CourseLevel,
 } from '@/types/scheduling';
 import { doTimeSlotsOverlap, isTimeDuringBattenHour } from './timeSlots';
-import { isBlockBusting, getBlockBustingReason, isBlockBustingRoom } from '@/lib/utils/blockBusting';
+import { isBlockBusting, getBlockBustingReason, isBattenRoom } from '@/lib/utils/blockBusting';
 
 export function detectConflicts(
   sections: ScheduledSection[],
@@ -482,8 +482,8 @@ function detectRoomCapacityIssues(sections: ScheduledSection[]): Conflict[] {
  * - MWF: must be 50 min and start before 3:00 PM
  * - TR: must be 75 min and start before 2:30 PM
  *
- * Block-busting classes MUST use special rooms:
- * - Rouss 403, Monroe 120, or Pavilion VIII (Block-Bust)
+ * Block-busting classes MUST use one of the 3 Batten rooms:
+ * - Monroe 120, Rouss 403, or Pavilion VIII
  */
 function detectBlockBustingViolations(
   sections: ScheduledSection[],
@@ -496,27 +496,17 @@ function detectBlockBustingViolations(
     if (!course) return;
 
     const isBlockBustingCourse = isBlockBusting(section.timeSlot, course.duration);
-    const hasBlockBustingRoom = isBlockBustingRoom(section.room.id);
+    const hasBattenRoom = isBattenRoom(section.room.id);
 
-    // Case 1: Block-busting course NOT in block-busting room (ERROR)
-    if (isBlockBustingCourse && !hasBlockBustingRoom) {
+    // Block-busting course NOT in a Batten room (ERROR)
+    // Note: Standard courses CAN use Batten rooms too, so no warning for that case
+    if (isBlockBustingCourse && !hasBattenRoom) {
       const reason = getBlockBustingReason(section.timeSlot, course.duration);
       conflicts.push({
         id: `block-busting-violation-${section.id}`,
         type: ConflictType.BLOCK_BUSTING_VIOLATION,
         severity: 'error',
-        description: `Block-busting course must use Rouss 403, Monroe 120, or Pavilion VIII (Block-Bust). Reason: ${reason}. Currently in ${section.room.name}.`,
-        affectedSections: [section.id],
-      });
-    }
-
-    // Case 2: Standard course IN block-busting room (WARNING - room reservation issue)
-    if (!isBlockBustingCourse && hasBlockBustingRoom) {
-      conflicts.push({
-        id: `block-busting-room-misuse-${section.id}`,
-        type: ConflictType.BLOCK_BUSTING_ROOM_MISUSE,
-        severity: 'warning',
-        description: `Standard course should not use block-busting room ${section.room.name}. Reserve these rooms for block-busting classes.`,
+        description: `Block-busting course must use Monroe 120, Rouss 403, or Pavilion VIII. Reason: ${reason}. Currently in ${section.room.name}.`,
         affectedSections: [section.id],
       });
     }
