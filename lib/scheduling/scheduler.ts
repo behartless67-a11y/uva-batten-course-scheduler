@@ -500,24 +500,18 @@ export class CourseScheduler {
       }
     }
 
-    // Check 4: Student cohort conflicts (for core courses)
-    if (course.type === CourseType.CORE) {
+    // Check 4: Student cohort conflicts (same-cohort core courses cannot overlap)
+    // Courses with the same cohort (e.g., both MPP1) cannot be at the same time
+    // Electives (cohort = null or 'G/U Electives') can overlap with anything
+    if (course.cohort && course.cohort !== 'G/U Electives') {
       for (const existingSection of this.sections) {
         const existingCourse = this.courses.find(c => c.id === existingSection.courseId);
-        if (!existingCourse || existingCourse.type !== CourseType.CORE) continue;
+        if (!existingCourse) continue;
 
-        if (doTimeSlotsOverlap(existingSection.timeSlot, section.timeSlot)) {
-          // Check if they share target students
-          const sharedStudents = course.targetStudents.some(target =>
-            existingCourse.targetStudents.some(
-              existing =>
-                existing.program === target.program && existing.year === target.year
-            )
-          );
-
-          if (sharedStudents) {
-            return true;
-          }
+        // Check if same cohort and overlapping
+        if (existingCourse.cohort === course.cohort &&
+            doTimeSlotsOverlap(existingSection.timeSlot, section.timeSlot)) {
+          return true; // Same cohort courses cannot overlap
         }
       }
     }

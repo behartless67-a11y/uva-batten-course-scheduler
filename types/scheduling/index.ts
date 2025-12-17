@@ -24,6 +24,22 @@ export enum CourseType {
   ADVANCED_PROJECT = 'Advanced Project',
 }
 
+// Student cohort identifiers for conflict checking
+// Core classes with the same cohort cannot be scheduled at the same time
+export type CohortId =
+  | 'MPP1'      // MPP Year 1
+  | 'MPP2'      // MPP Year 2
+  | 'BA1'       // BA Year 1
+  | 'BA2'       // BA Year 2
+  | 'BA3'       // BA Year 3
+  | 'BA4'       // BA Year 4
+  | 'Minor'     // Minor students
+  | 'Certificate' // Certificate students
+  | 'Accel1'    // Accelerated Year 1
+  | 'Accel2'    // Accelerated Year 2
+  | 'G/U Electives' // Graduate/Undergrad Electives (no cohort conflict)
+  | null;       // No cohort (electives can conflict)
+
 export enum RoomType {
   MONROE_120 = 'Monroe 120',
   ROUSS_403 = 'Rouss 403',
@@ -97,6 +113,11 @@ export interface Course {
   numberOfDiscussions?: number;
   studentsPerDiscussion?: number;
 
+  // Cohort assignment - determines conflict groups
+  // Core classes with the same cohort cannot overlap
+  // Courses with cohort = null or 'G/U Electives' can conflict freely
+  cohort: CohortId;
+
   // Special requirements
   requiresLargeLectureHall?: boolean;
   requiresSmallRoom?: boolean;
@@ -106,7 +127,7 @@ export interface Course {
   sessionsPerWeek: number; // 1, 2, or 3
   discussionDaysConstraint?: 'tuesday-thursday' | 'thursday-only' | 'same-as-lecture'; // Special constraints for discussion scheduling
 
-  // Targeting
+  // Targeting (legacy - kept for backwards compatibility)
   targetStudents: StudentCohort[];
 
   // Notes

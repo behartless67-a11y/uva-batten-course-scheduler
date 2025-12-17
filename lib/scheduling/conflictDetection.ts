@@ -7,6 +7,7 @@ import {
   StudentCohort,
   CourseType,
   CourseLevel,
+  CohortId,
 } from '@/types/scheduling';
 import { doTimeSlotsOverlap, isTimeDuringBattenHour } from './timeSlots';
 import { isBlockBusting, getBlockBustingReason, isBattenRoom } from '@/lib/utils/blockBusting';
@@ -161,6 +162,14 @@ function checkHardConstraint(section: ScheduledSection, constraint: any): boolea
   return false;
 }
 
+/**
+ * Detect cohort conflicts - core classes with the same cohort cannot overlap
+ *
+ * Rules:
+ * - Two core classes with the SAME cohort cannot be scheduled at the same time
+ * - Electives (cohort = null or 'G/U Electives') can overlap with anything
+ * - Different cohorts can overlap (e.g., MPP1 class at 9am + BA3 class at 9am = OK)
+ */
 function detectStudentCohortOverlaps(
   sections: ScheduledSection[],
   courses: Course[]
@@ -176,17 +185,13 @@ function detectStudentCohortOverlaps(
         const course2 = courseMap.get(sections[j].courseId);
 
         if (course1 && course2) {
-          const sharedCohorts = findSharedStudentCohorts(
-            course1.targetStudents,
-            course2.targetStudents
-          );
-
-          if (sharedCohorts.length > 0) {
+          // Check for cohort conflict using the new cohort field
+          if (hasCohortConflict(course1.cohort, course2.cohort)) {
             conflicts.push({
               id: `cohort-overlap-${i}-${j}`,
               type: ConflictType.STUDENT_COHORT_OVERLAP,
               severity: 'error',
-              description: `Student cohort conflict: ${sharedCohorts.map(c => `${c.program} Year ${c.year}`).join(', ')}`,
+              description: `Cohort conflict: Both courses are for ${course1.cohort} students and cannot overlap`,
               affectedSections: [sections[i].id, sections[j].id],
               affectedCourses: [course1.id, course2.id],
             });
@@ -199,6 +204,25 @@ function detectStudentCohortOverlaps(
   return conflicts;
 }
 
+/**
+ * Check if two cohorts conflict (i.e., are the same non-elective cohort)
+ *
+ * Rules:
+ * - null cohort = elective, no conflict
+ * - 'G/U Electives' = elective, no conflict
+ * - Same non-null, non-elective cohort = CONFLICT
+ * - Different cohorts = no conflict
+ */
+function hasCohortConflict(cohort1: CohortId, cohort2: CohortId): boolean {
+  // Electives (null or 'G/U Electives') never conflict
+  if (cohort1 === null || cohort1 === 'G/U Electives') return false;
+  if (cohort2 === null || cohort2 === 'G/U Electives') return false;
+
+  // Same cohort = conflict
+  return cohort1 === cohort2;
+}
+
+// Legacy function kept for backwards compatibility
 function findSharedStudentCohorts(
   cohorts1: StudentCohort[],
   cohorts2: StudentCohort[]

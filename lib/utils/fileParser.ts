@@ -8,6 +8,7 @@ import {
   CourseType,
   CourseLevel,
   RoomType,
+  CohortId,
 } from '@/types/scheduling';
 
 /**
@@ -172,7 +173,8 @@ export function parseCombinedData(file: File): Promise<{ faculty: Faculty[], cou
           const numberOfDiscussions = getColumnValue(row, ['numberOfDiscussions', 'number_of_discussions', 'discussions']);
           const duration = getColumnValue(row, ['duration', 'length', 'minutes']);
           const sessionsPerWeek = getColumnValue(row, ['sessionsPerWeek', 'sessions_per_week', 'sessions']);
-          const targetPrograms = getColumnValue(row, ['targetPrograms', 'target_programs', 'cohort', 'cohorts', 'programs']);
+          const cohortValue = getColumnValue(row, ['cohort', 'studentCohort', 'student_cohort', 'targetCohort']);
+          const targetPrograms = getColumnValue(row, ['targetPrograms', 'target_programs', 'cohorts', 'programs']);
           const notes = getColumnValue(row, ['notes', 'comments', 'description']);
 
           // Parse course type
@@ -211,6 +213,19 @@ export function parseCombinedData(file: File): Promise<{ faculty: Faculty[], cou
             discussionDaysConstraint = 'thursday-only';
           }
 
+          // Parse cohort and check for errors
+          const cohortResult = parseCohort(cohortValue);
+          if (cohortResult.error) {
+            console.error(`Row ${index + 1} (${code}): ${cohortResult.error}`);
+          }
+
+          // Determine if course is core based on cohort
+          // If a cohort is specified (not null and not G/U Electives), it's a core course
+          const hasCohort = cohortResult.cohort !== null && cohortResult.cohort !== 'G/U Electives';
+          if (hasCohort) {
+            courseType = CourseType.CORE;
+          }
+
           courses.push({
             id: `course-${index + 1}`,
             code: code,
@@ -225,6 +240,7 @@ export function parseCombinedData(file: File): Promise<{ faculty: Faculty[], cou
             discussionDuration,
             sessionsPerWeek: parseInt(sessionsPerWeek) || 2,
             discussionDaysConstraint,
+            cohort: cohortResult.cohort,
             targetStudents: parseTargetPrograms(targetPrograms),
             preferredRoom,
             notes: notes,
@@ -306,6 +322,18 @@ export function parseCourseData(file: File, faculty: Faculty[]): Promise<Course[
             discussionDaysConstraint = 'thursday-only';
           }
 
+          // Parse cohort from row (if available)
+          const cohortResult = parseCohort((row as any).cohort);
+          if (cohortResult.error) {
+            console.error(`Row ${index + 1} (${row.code}): ${cohortResult.error}`);
+          }
+
+          // Determine if course is core based on cohort
+          const hasCohort = cohortResult.cohort !== null && cohortResult.cohort !== 'G/U Electives';
+          if (hasCohort) {
+            courseType = CourseType.CORE;
+          }
+
           return {
             id: `course-${index + 1}`,
             code: row.code,
@@ -320,6 +348,7 @@ export function parseCourseData(file: File, faculty: Faculty[]): Promise<Course[
             discussionDuration,
             sessionsPerWeek: row.sessionsPerWeek,
             discussionDaysConstraint,
+            cohort: cohortResult.cohort,
             targetStudents: parseTargetPrograms(row.targetPrograms),
             preferredRoom,
             notes: row.notes,
@@ -340,6 +369,68 @@ export function parseCourseData(file: File, faculty: Faculty[]): Promise<Course[
 
     reader.readAsBinaryString(file);
   });
+}
+
+/**
+ * Parse cohort value from spreadsheet
+ * Valid cohorts: MPP1, MPP2, BA1, BA2, BA3, BA4, Minor, Certificate, Accel1, Accel2, G/U Electives
+ * Returns null for electives (no cohort conflict checking)
+ * Throws error if multiple cohorts specified (e.g., "BA3,BA4")
+ */
+function parseCohort(cohortStr?: string): { cohort: CohortId; error?: string } {
+  if (!cohortStr || cohortStr.trim() === '') {
+    return { cohort: null };
+  }
+
+  const trimmed = cohortStr.trim();
+
+  // Check for multiple cohorts (error condition)
+  if (trimmed.includes(',')) {
+    return {
+      cohort: null,
+      error: `Invalid cohort "${trimmed}": A course can only belong to ONE cohort. Multiple cohorts (comma-separated) are not allowed.`
+    };
+  }
+
+  // Normalize the cohort string
+  const normalized = trimmed.toUpperCase().replace(/\s+/g, '');
+
+  // Map various formats to standard CohortId
+  const cohortMap: Record<string, CohortId> = {
+    'MPP1': 'MPP1',
+    'MPPYEAR1': 'MPP1',
+    'MPP2': 'MPP2',
+    'MPPYEAR2': 'MPP2',
+    'BA1': 'BA1',
+    'BAYEAR1': 'BA1',
+    'BA2': 'BA2',
+    'BAYEAR2': 'BA2',
+    'BA3': 'BA3',
+    'BAYEAR3': 'BA3',
+    'BA4': 'BA4',
+    'BAYEAR4': 'BA4',
+    'MINOR': 'Minor',
+    'CERTIFICATE': 'Certificate',
+    'CERT': 'Certificate',
+    'ACCEL1': 'Accel1',
+    'ACCELERATED1': 'Accel1',
+    'ACCEL2': 'Accel2',
+    'ACCELERATED2': 'Accel2',
+    'G/UELECTIVES': 'G/U Electives',
+    'GUELECTIVES': 'G/U Electives',
+    'G/UELECTIVE': 'G/U Electives',
+    'ELECTIVE': 'G/U Electives',
+    'ELECTIVES': 'G/U Electives',
+  };
+
+  const mappedCohort = cohortMap[normalized];
+  if (mappedCohort) {
+    return { cohort: mappedCohort };
+  }
+
+  // If not recognized, return null with warning (treat as elective)
+  console.warn(`Unrecognized cohort "${trimmed}", treating as elective (no cohort conflict checking)`);
+  return { cohort: null };
 }
 
 /**

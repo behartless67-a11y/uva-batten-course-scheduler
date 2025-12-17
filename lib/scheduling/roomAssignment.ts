@@ -45,13 +45,17 @@ export const ROOMS: Room[] = [
 
 /**
  * Assigns a room to a course section based on priority rules:
- * 1. Monroe 120 (68 capacity) - for large lectures
- * 2. Rouss 403 (48 capacity) - for medium courses
- * 3. Pavilion VIII (18 capacity) - for small electives and capstones
- * 4. UREG Assigned - for everything else
  *
- * All 3 Batten rooms (Monroe 120, Rouss 403, Pavilion VIII) can be used
- * for block-busting courses.
+ * Room Priority Order (maximize Batten rooms, minimize UREG):
+ * 1. Monroe 120 (68 capacity) - high priority for large classes
+ * 2. Rouss 403 (48 capacity) - high priority for medium classes
+ * 3. Pavilion VIII (18 capacity) - prioritized for 2.5hr classes with ≤18 students
+ * 4. UREG Assigned - only as fallback (minimize usage)
+ *
+ * Special Rule: 2.5 hour (150 min) classes with 18 or fewer students
+ * should be prioritized for Pavilion VIII.
+ *
+ * All 3 Batten rooms can be used for block-busting courses.
  */
 export function assignRoom(course: Course, enrollmentCap: number): Room {
   // Priority 1: Check for explicit preferred room
@@ -62,7 +66,13 @@ export function assignRoom(course: Course, enrollmentCap: number): Room {
     }
   }
 
-  // Priority 2: Core courses need Monroe 120 or Rouss 403
+  // Priority 2: 2.5 hour classes (150 min) with ≤18 students -> Pavilion VIII
+  // This is a key scheduling requirement
+  if (course.duration >= 150 && enrollmentCap <= 18) {
+    return ROOMS.find(r => r.type === RoomType.PAVILION_VIII)!;
+  }
+
+  // Priority 3: Core courses need Monroe 120 or Rouss 403
   if (course.type === CourseType.CORE) {
     // If only one section, must use large lecture hall
     if (course.numberOfSections === 1) {
@@ -77,29 +87,29 @@ export function assignRoom(course: Course, enrollmentCap: number): Room {
     }
   }
 
-  // Priority 3: Capstones prefer Pavilion VIII
+  // Priority 4: Capstones prefer Pavilion VIII
   if (course.type === CourseType.CAPSTONE || course.type === CourseType.ADVANCED_PROJECT) {
-    if (enrollmentCap <= 20) {
+    if (enrollmentCap <= 18) {
       return ROOMS.find(r => r.type === RoomType.PAVILION_VIII)!;
     }
   }
 
-  // Priority 4: Small electives (< 20 students)
-  if (course.type === CourseType.ELECTIVE && enrollmentCap <= 20) {
+  // Priority 5: Small courses (≤18 students) -> Pavilion VIII
+  if (enrollmentCap <= 18) {
     return ROOMS.find(r => r.type === RoomType.PAVILION_VIII)!;
   }
 
-  // Priority 5: Medium electives
-  if (course.type === CourseType.ELECTIVE && enrollmentCap <= 48) {
+  // Priority 6: Medium courses (≤48 students) -> Rouss 403
+  if (enrollmentCap <= 48) {
     return ROOMS.find(r => r.type === RoomType.ROUSS_403)!;
   }
 
-  // Priority 6: Large electives
-  if (course.type === CourseType.ELECTIVE && enrollmentCap <= 68) {
+  // Priority 7: Large courses (≤68 students) -> Monroe 120
+  if (enrollmentCap <= 68) {
     return ROOMS.find(r => r.type === RoomType.MONROE_120)!;
   }
 
-  // Default: UREG assigned (leave blank for registrar to assign)
+  // Default: UREG assigned (only for very large classes that don't fit Batten rooms)
   return ROOMS.find(r => r.type === RoomType.UREG_ASSIGNED)!;
 }
 
